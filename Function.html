@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>1차함수 · 2차함수 슬라이더 시각화</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, 'Noto Sans KR', sans-serif;
+      background: #f4f6fb;
+      color: #222;
+    }
+
+    .app {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 34px;
+    }
+
+    .subtitle {
+      margin-bottom: 20px;
+      font-size: 18px;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.45fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 820 / 620;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 1px solid #dde3ef;
+    }
+
+    .control-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .toggle-box {
+      margin-bottom: 18px;
+      padding: 14px;
+      border-radius: 16px;
+      background: #eef6ff;
+      border: 1px solid #bfdbfe;
+    }
+
+    .toggle-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .radio-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .radio-option {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 10px;
+      border-radius: 14px;
+      background: white;
+      border: 2px solid #dbeafe;
+      font-size: 20px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .radio-option input {
+      width: 18px;
+      height: 18px;
+    }
+
+    .slider-row {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #2563eb;
+    }
+
+    .value-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-top: 6px;
+      font-size: 15px;
+      color: #64748b;
+    }
+
+    .big-value {
+      font-size: 28px;
+      font-weight: 900;
+      color: #2563eb;
+    }
+
+    .formula-box {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 16px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      font-size: 22px;
+      line-height: 1.65;
+    }
+
+    .formula {
+      font-size: 32px;
+      font-weight: 900;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .info-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .info-box {
+      border-radius: 14px;
+      padding: 13px 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      font-size: 19px;
+      line-height: 1.45;
+    }
+
+    .info-box strong {
+      color: #2563eb;
+    }
+
+    .note {
+      margin-top: 12px;
+      color: #555;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 930px) {
+      .layout { grid-template-columns: 1fr; }
+      canvas { aspect-ratio: 820 / 620; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>1차함수 · 2차함수 슬라이더</h1>
+    <div class="subtitle">함수 종류를 바꾸고, 계수를 움직이며 그래프의 모양과 위치가 어떻게 변하는지 확인합니다.</div>
+
+    <div class="layout">
+      <div class="card">
+        <canvas id="canvas" width="820" height="620"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="control-title">그래프 조절</div>
+
+        <div class="toggle-box">
+          <div class="toggle-title">함수 종류</div>
+          <div class="radio-row">
+            <label class="radio-option">
+              <input type="radio" name="functionType" value="linear" checked /> 1차함수
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="functionType" value="quadratic" /> 2차함수
+            </label>
+          </div>
+        </div>
+
+        <div id="linearControls">
+          <div class="slider-row">
+            <label for="mSlider">기울기 m</label>
+            <input id="mSlider" type="range" min="-5" max="5" value="1" step="0.1" />
+            <div class="value-line"><span>-5</span><span class="big-value">m = <span id="mText">1</span></span><span>5</span></div>
+          </div>
+
+          <div class="slider-row">
+            <label for="bSlider">y절편 b</label>
+            <input id="bSlider" type="range" min="-8" max="8" value="0" step="0.5" />
+            <div class="value-line"><span>-8</span><span class="big-value">b = <span id="bText">0</span></span><span>8</span></div>
+          </div>
+        </div>
+
+        <div id="quadraticControls" class="hidden">
+          <div class="slider-row">
+            <label for="aSlider">폭과 방향 a</label>
+            <input id="aSlider" type="range" min="-3" max="3" value="1" step="0.1" />
+            <div class="value-line"><span>-3</span><span class="big-value">a = <span id="aText">1</span></span><span>3</span></div>
+          </div>
+
+          <div class="slider-row">
+            <label for="pSlider">좌우 이동 p</label>
+            <input id="pSlider" type="range" min="-6" max="6" value="0" step="0.5" />
+            <div class="value-line"><span>-6</span><span class="big-value">p = <span id="pText">0</span></span><span>6</span></div>
+          </div>
+
+          <div class="slider-row">
+            <label for="qSlider">상하 이동 q</label>
+            <input id="qSlider" type="range" min="-8" max="8" value="0" step="0.5" />
+            <div class="value-line"><span>-8</span><span class="big-value">q = <span id="qText">0</span></span><span>8</span></div>
+          </div>
+        </div>
+
+        <div class="formula-box">
+          <div class="formula" id="formulaText">y = x</div>
+          <div id="meaningText">m은 기울기, b는 y축과 만나는 위치입니다.</div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-box" id="feature1"><strong>기울기</strong>가 양수이면 오른쪽 위로 올라갑니다.</div>
+          <div class="info-box" id="feature2"><strong>y절편</strong>은 그래프가 y축과 만나는 점입니다.</div>
+          <div class="info-box" id="feature3"><strong>표시점</strong>을 통해 실제 좌표를 확인합니다.</div>
+        </div>
+
+        <div class="note">전자칠판에서 보기 쉽도록 좌표축, 격자, 주요점, 보조선을 크게 표시했습니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const CANVAS_WIDTH = 820;
+    const CANVAS_HEIGHT = 620;
+
+    const controls = {
+      linear: document.getElementById('linearControls'),
+      quadratic: document.getElementById('quadraticControls'),
+      m: document.getElementById('mSlider'),
+      b: document.getElementById('bSlider'),
+      a: document.getElementById('aSlider'),
+      p: document.getElementById('pSlider'),
+      q: document.getElementById('qSlider')
+    };
+
+    const text = {
+      m: document.getElementById('mText'),
+      b: document.getElementById('bText'),
+      a: document.getElementById('aText'),
+      p: document.getElementById('pText'),
+      q: document.getElementById('qText'),
+      formula: document.getElementById('formulaText'),
+      meaning: document.getElementById('meaningText'),
+      feature1: document.getElementById('feature1'),
+      feature2: document.getElementById('feature2'),
+      feature3: document.getElementById('feature3')
+    };
+
+    const COLORS = {
+      axis: '#111827',
+      grid: '#e8eef8',
+      graph: '#2563eb',
+      point: '#dc2626',
+      guide: '#94a3b8',
+      vertex: '#9333ea',
+      positive: '#16a34a'
+    };
+
+    const view = {
+      xMin: -10,
+      xMax: 10,
+      yMin: -10,
+      yMax: 10,
+      left: 58,
+      right: 34,
+      top: 34,
+      bottom: 54
+    };
+
+    function setupCanvasScale() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = CANVAS_WIDTH * dpr;
+      canvas.height = CANVAS_HEIGHT * dpr;
+      canvas.style.width = '100%';
+      canvas.style.aspectRatio = `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function getFunctionType() {
+      return document.querySelector('input[name="functionType"]:checked').value;
+    }
+
+    function num(value) {
+      return Number(value);
+    }
+
+    function clean(value) {
+      if (Math.abs(value) < 0.000001) return '0';
+      if (Number.isInteger(value)) return String(value);
+      return value.toFixed(1).replace(/\.0$/, '');
+    }
+
+    function signed(value) {
+      if (value === 0) return '';
+      return value > 0 ? ` + ${clean(value)}` : ` - ${clean(Math.abs(value))}`;
+    }
+
+    function linearFormula(m, b) {
+      let mPart;
+      if (m === 0) mPart = '0';
+      else if (m === 1) mPart = 'x';
+      else if (m === -1) mPart = '-x';
+      else mPart = `${clean(m)}x`;
+
+      if (m === 0) return `y = ${clean(b)}`;
+      return `y = ${mPart}${signed(b)}`;
+    }
+
+    function quadraticFormula(a, p, q) {
+      let aPart;
+      if (a === 1) aPart = '';
+      else if (a === -1) aPart = '-';
+      else aPart = clean(a);
+
+      const inside = p === 0 ? 'x' : p > 0 ? `(x - ${clean(p)})` : `(x + ${clean(Math.abs(p))})`;
+      const main = a === 0 ? '0' : `${aPart}${inside}²`;
+      if (a === 0) return `y = ${clean(q)}`;
+      return `y = ${main}${signed(q)}`;
+    }
+
+    function plotX(x) {
+      const width = CANVAS_WIDTH - view.left - view.right;
+      return view.left + (x - view.xMin) / (view.xMax - view.xMin) * width;
+    }
+
+    function plotY(y) {
+      const height = CANVAS_HEIGHT - view.top - view.bottom;
+      return CANVAS_HEIGHT - view.bottom - (y - view.yMin) / (view.yMax - view.yMin) * height;
+    }
+
+    function drawLine(x1, y1, x2, y2, color, width = 2, dashed = false) {
+      ctx.save();
+      if (dashed) ctx.setLineDash([7, 7]);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawLabel(label, x, y, color = '#222', size = 18, align = 'left') {
+      ctx.font = `bold ${size}px Arial`;
+      ctx.fillStyle = color;
+      ctx.textAlign = align;
+      ctx.fillText(label, x, y);
+      ctx.textAlign = 'left';
+    }
+
+    function drawPoint(x, y, label, color = COLORS.point) {
+      const px = plotX(x);
+      const py = plotY(y);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px, py, 7, 0, Math.PI * 2);
+      ctx.fill();
+      drawLabel(label, px + 12, py - 12, color, 18);
+    }
+
+    function drawGridAndAxes() {
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      for (let x = view.xMin; x <= view.xMax; x += 1) {
+        const px = plotX(x);
+        drawLine(px, plotY(view.yMin), px, plotY(view.yMax), COLORS.grid, x === 0 ? 0 : 1);
+      }
+      for (let y = view.yMin; y <= view.yMax; y += 1) {
+        const py = plotY(y);
+        drawLine(plotX(view.xMin), py, plotX(view.xMax), py, COLORS.grid, y === 0 ? 0 : 1);
+      }
+
+      drawLine(plotX(view.xMin), plotY(0), plotX(view.xMax), plotY(0), COLORS.axis, 3);
+      drawLine(plotX(0), plotY(view.yMin), plotX(0), plotY(view.yMax), COLORS.axis, 3);
+
+      // arrow heads
+      drawLine(plotX(view.xMax), plotY(0), plotX(view.xMax) - 12, plotY(0) - 7, COLORS.axis, 3);
+      drawLine(plotX(view.xMax), plotY(0), plotX(view.xMax) - 12, plotY(0) + 7, COLORS.axis, 3);
+      drawLine(plotX(0), plotY(view.yMax), plotX(0) - 7, plotY(view.yMax) + 12, COLORS.axis, 3);
+      drawLine(plotX(0), plotY(view.yMax), plotX(0) + 7, plotY(view.yMax) + 12, COLORS.axis, 3);
+
+      for (let x = view.xMin; x <= view.xMax; x += 2) {
+        if (x !== 0) drawLabel(String(x), plotX(x), plotY(0) + 24, '#64748b', 14, 'center');
+      }
+      for (let y = view.yMin; y <= view.yMax; y += 2) {
+        if (y !== 0) drawLabel(String(y), plotX(0) - 12, plotY(y) + 5, '#64748b', 14, 'right');
+      }
+      drawLabel('O', plotX(0) - 22, plotY(0) + 24, '#111827', 18);
+      drawLabel('x', plotX(view.xMax) - 3, plotY(0) - 16, '#111827', 20);
+      drawLabel('y', plotX(0) + 14, plotY(view.yMax) + 20, '#111827', 20);
+    }
+
+    function drawFunction(fn) {
+      ctx.save();
+      ctx.strokeStyle = COLORS.graph;
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      let started = false;
+
+      for (let pixel = 0; pixel <= 900; pixel += 1) {
+        const x = view.xMin + (view.xMax - view.xMin) * pixel / 900;
+        const y = fn(x);
+        const px = plotX(x);
+        const py = plotY(y);
+
+        if (y < view.yMin - 8 || y > view.yMax + 8 || !Number.isFinite(y)) {
+          started = false;
+          continue;
+        }
+
+        if (!started) {
+          ctx.moveTo(px, py);
+          started = true;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawLinear() {
+      const m = num(controls.m.value);
+      const b = num(controls.b.value);
+      const fn = x => m * x + b;
+      drawFunction(fn);
+
+      const x1 = 0;
+      const y1 = fn(x1);
+      const x2 = 1;
+      const y2 = fn(x2);
+      if (y1 >= view.yMin && y1 <= view.yMax) {
+        drawLine(plotX(x1), plotY(y1), plotX(x1), plotY(0), COLORS.guide, 2, true);
+        drawPoint(x1, y1, `(0, ${clean(y1)})`, COLORS.point);
+      }
+      if (y2 >= view.yMin && y2 <= view.yMax) {
+        drawLine(plotX(x1), plotY(y1), plotX(x2), plotY(y1), COLORS.positive, 4);
+        drawLine(plotX(x2), plotY(y1), plotX(x2), plotY(y2), COLORS.positive, 4);
+        drawPoint(x2, y2, `(1, ${clean(y2)})`, COLORS.positive);
+        drawLabel('x가 1 증가', (plotX(x1) + plotX(x2)) / 2, plotY(y1) + 30, COLORS.positive, 17, 'center');
+        drawLabel(`y는 ${clean(m)} 변화`, plotX(x2) + 12, (plotY(y1) + plotY(y2)) / 2, COLORS.positive, 17);
+      }
+
+      text.formula.textContent = linearFormula(m, b);
+      text.meaning.textContent = 'm은 기울기, b는 y축과 만나는 위치입니다.';
+      text.feature1.innerHTML = `<strong>기울기 m = ${clean(m)}</strong> : x가 1 증가할 때 y가 ${clean(m)}만큼 변합니다.`;
+      text.feature2.innerHTML = `<strong>y절편 b = ${clean(b)}</strong> : 그래프는 y축의 ${clean(b)}에서 만납니다.`;
+      text.feature3.innerHTML = m > 0 ? '<strong>증가 함수</strong> : 오른쪽으로 갈수록 올라갑니다.' : m < 0 ? '<strong>감소 함수</strong> : 오른쪽으로 갈수록 내려갑니다.' : '<strong>상수 함수</strong> : x가 변해도 y값이 일정합니다.';
+    }
+
+    function drawQuadratic() {
+      let a = num(controls.a.value);
+      const p = num(controls.p.value);
+      const q = num(controls.q.value);
+      const fn = x => a * Math.pow(x - p, 2) + q;
+      drawFunction(fn);
+
+      drawLine(plotX(p), plotY(view.yMin), plotX(p), plotY(view.yMax), COLORS.guide, 2, true);
+      drawLine(plotX(view.xMin), plotY(q), plotX(view.xMax), plotY(q), COLORS.guide, 2, true);
+      drawPoint(p, q, `꼭짓점 (${clean(p)}, ${clean(q)})`, COLORS.vertex);
+
+      const sampleLeft = p - 1;
+      const sampleRight = p + 1;
+      const yLeft = fn(sampleLeft);
+      const yRight = fn(sampleRight);
+      if (yLeft >= view.yMin && yLeft <= view.yMax) drawPoint(sampleLeft, yLeft, '', COLORS.point);
+      if (yRight >= view.yMin && yRight <= view.yMax) drawPoint(sampleRight, yRight, '', COLORS.point);
+      if (yLeft >= view.yMin && yLeft <= view.yMax && yRight >= view.yMin && yRight <= view.yMax) {
+        drawLine(plotX(sampleLeft), plotY(yLeft), plotX(sampleRight), plotY(yRight), COLORS.guide, 2, true);
+        drawLabel('축을 기준으로 대칭', plotX(p), plotY(Math.max(yLeft, yRight)) - 14, COLORS.guide, 17, 'center');
+      }
+
+      text.formula.textContent = quadraticFormula(a, p, q);
+      text.meaning.textContent = 'a는 폭과 방향, p와 q는 꼭짓점의 위치를 정합니다.';
+      text.feature1.innerHTML = a > 0 ? '<strong>a &gt; 0</strong> : 아래에서 위로 열린 포물선입니다.' : a < 0 ? '<strong>a &lt; 0</strong> : 위에서 아래로 열린 포물선입니다.' : '<strong>a = 0</strong> : 포물선이 아니라 직선처럼 보입니다.';
+      text.feature2.innerHTML = `<strong>꼭짓점</strong> : (${clean(p)}, ${clean(q)})`;
+      text.feature3.innerHTML = `<strong>축의 방정식</strong> : x = ${clean(p)}`;
+    }
+
+    function updateTexts() {
+      text.m.textContent = clean(num(controls.m.value));
+      text.b.textContent = clean(num(controls.b.value));
+      text.a.textContent = clean(num(controls.a.value));
+      text.p.textContent = clean(num(controls.p.value));
+      text.q.textContent = clean(num(controls.q.value));
+    }
+
+    function draw() {
+      updateTexts();
+      const type = getFunctionType();
+      controls.linear.classList.toggle('hidden', type !== 'linear');
+      controls.quadratic.classList.toggle('hidden', type !== 'quadratic');
+      drawGridAndAxes();
+      if (type === 'linear') drawLinear();
+      else drawQuadratic();
+    }
+
+    function runTests() {
+      console.assert(linearFormula(1, 0) === 'y = x', 'y=x 표기가 맞아야 합니다.');
+      console.assert(linearFormula(-1, 2) === 'y = -x + 2', 'y=-x+2 표기가 맞아야 합니다.');
+      console.assert(quadraticFormula(1, 0, 0) === 'y = x²', '기본 이차함수 표기가 맞아야 합니다.');
+      console.assert(quadraticFormula(1, 2, -3) === 'y = (x - 2)² - 3', '꼭짓점형 표기가 맞아야 합니다.');
+    }
+
+    document.querySelectorAll('input[name="functionType"]').forEach(radio => radio.addEventListener('change', draw));
+    Object.values(controls).forEach(el => {
+      if (el && el.tagName === 'INPUT') el.addEventListener('input', draw);
+    });
+
+    runTests();
+    setupCanvasScale();
+    draw();
+    window.addEventListener('resize', () => {
+      setupCanvasScale();
+      draw();
+    });
+  </script>
+</body>
+</html>

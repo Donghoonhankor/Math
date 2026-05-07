@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>현의 성질 인터랙티브</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Noto Sans KR", Arial, sans-serif;
+      background: #f6f7fb;
+      color: #1f2937;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1.35fr 0.9fr;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    .board, .panel {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+      padding: 24px;
+    }
+
+    .board {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 640px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 34px;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin: 0 0 20px;
+      color: #64748b;
+      font-size: 17px;
+      line-height: 1.5;
+    }
+
+    .mode-buttons {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 16px;
+      padding: 16px 18px;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      background: #e2e8f0;
+      color: #334155;
+      transition: 0.2s;
+      text-align: left;
+    }
+
+    button.active {
+      background: #2563eb;
+      color: white;
+      box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+    }
+
+    .control-box {
+      border: 2px solid #e5e7eb;
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 18px;
+      background: #fbfdff;
+    }
+
+    .control-box label {
+      display: block;
+      font-size: 17px;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #2563eb;
+    }
+
+    .value-line {
+      margin-top: 8px;
+      font-size: 15px;
+      color: #64748b;
+    }
+
+    .explain {
+      background: #eff6ff;
+      border-left: 7px solid #2563eb;
+      padding: 18px 20px;
+      border-radius: 16px;
+      line-height: 1.65;
+      font-size: 18px;
+      margin-top: 14px;
+    }
+
+    .explain strong {
+      color: #1d4ed8;
+    }
+
+    .proof {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+
+    .proof h2 {
+      margin: 0 0 10px;
+      font-size: 21px;
+    }
+
+    .proof ol {
+      margin: 0;
+      padding-left: 24px;
+      line-height: 1.75;
+      font-size: 17px;
+    }
+
+    svg {
+      width: 100%;
+      max-width: 780px;
+      height: auto;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .circle {
+      fill: #f8fbff;
+      stroke: #0f172a;
+      stroke-width: 4;
+    }
+
+    .radius {
+      stroke: #64748b;
+      stroke-width: 3;
+      stroke-dasharray: 9 7;
+    }
+
+    .chord {
+      stroke: #dc2626;
+      stroke-width: 7;
+      stroke-linecap: round;
+    }
+
+    .perp {
+      stroke: #2563eb;
+      stroke-width: 5;
+      stroke-linecap: round;
+    }
+
+    .helper {
+      stroke: #16a34a;
+      stroke-width: 6;
+      stroke-linecap: round;
+    }
+
+    .point {
+      fill: white;
+      stroke: #111827;
+      stroke-width: 4;
+    }
+
+    .center-point {
+      fill: #111827;
+    }
+
+    .label {
+      font-size: 25px;
+      font-weight: 900;
+      fill: #111827;
+    }
+
+    .small-label {
+      font-size: 22px;
+      font-weight: 800;
+      fill: #334155;
+    }
+
+    .math-label {
+      font-size: 24px;
+      font-weight: 900;
+      fill: #1d4ed8;
+    }
+
+    .right-angle {
+      fill: none;
+      stroke: #2563eb;
+      stroke-width: 4;
+    }
+
+    .tick {
+      stroke: #111827;
+      stroke-width: 4;
+      stroke-linecap: round;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="board">
+      <svg viewBox="0 0 800 650" aria-label="원의 현의 성질 설명 그림">
+        <circle id="mainCircle" class="circle" cx="400" cy="325" r="220" />
+
+        <!-- Property 1: perpendicular from center bisects chord -->
+        <g id="mode1Group">
+          <line id="rOA" class="radius" />
+          <line id="rOB" class="radius" />
+          <line id="chordAB" class="chord" />
+          <line id="perpOH" class="perp" />
+          <path id="rightAngle" class="right-angle" />
+          <line id="tickAH1" class="tick" />
+          <line id="tickAH2" class="tick" />
+          <line id="tickHB1" class="tick" />
+          <line id="tickHB2" class="tick" />
+          <circle id="pointA" class="point" r="8" />
+          <circle id="pointB" class="point" r="8" />
+          <circle id="pointH" class="point" r="7" />
+          <text id="labelA" class="label">A</text>
+          <text id="labelB" class="label">B</text>
+          <text id="labelH" class="label">H</text>
+          <text id="labelAHHB" class="math-label">AH = HB</text>
+        </g>
+
+        <!-- Property 2: equal distance from center means equal chords -->
+        <g id="mode2Group" class="hidden">
+          <line id="rOB2" class="radius" />
+          <line id="rOC2" class="radius" />
+          <line id="chordAB2" class="chord" />
+          <line id="chordCD2" class="helper" />
+          <line id="perpOH2" class="perp" />
+          <line id="perpOK2" class="perp" />
+          <path id="rightAngleH2" class="right-angle" />
+          <path id="rightAngleK2" class="right-angle" />
+          <line id="distTickH1" class="tick" />
+          <line id="distTickH2" class="tick" />
+          <line id="distTickK1" class="tick" />
+          <line id="distTickK2" class="tick" />
+          <circle id="pointA2" class="point" r="8" />
+          <circle id="pointB2" class="point" r="8" />
+          <circle id="pointC2" class="point" r="8" />
+          <circle id="pointD2" class="point" r="8" />
+          <circle id="pointH2" class="point" r="7" />
+          <circle id="pointK2" class="point" r="7" />
+          <text id="labelA2" class="label">A</text>
+          <text id="labelB2" class="label">B</text>
+          <text id="labelC2" class="label">C</text>
+          <text id="labelD2" class="label">D</text>
+          <text id="labelH2" class="label">H</text>
+          <text id="labelK2" class="label">K</text>
+          <text id="labelEqualDist" class="math-label">OH = OK</text>
+          <text id="labelEqualChord" class="math-label">AB = CD</text>
+        </g>
+
+        <circle id="pointO" class="center-point" cx="400" cy="325" r="8" />
+        <text class="label" x="415" y="318">O</text>
+      </svg>
+    </section>
+
+    <aside class="panel">
+      <h1>현의 성질</h1>
+      <p class="subtitle">버튼을 바꾸면서 두 가지 핵심 성질을 비교해 보세요.</p>
+
+      <div class="mode-buttons">
+        <button id="mode1Btn" class="active">1. 중심에서 현에 내린 수선</button>
+        <button id="mode2Btn">2. 중심에서 같은 거리인 두 현</button>
+      </div>
+
+      <div id="control1" class="control-box">
+        <label for="heightSlider">현 AB의 위치</label>
+        <input id="heightSlider" type="range" min="-150" max="150" value="80" />
+        <div id="heightValue" class="value-line"></div>
+      </div>
+
+      <div id="control2" class="control-box hidden">
+        <label for="distanceSlider">중심에서 현까지의 거리</label>
+        <input id="distanceSlider" type="range" min="35" max="170" value="105" />
+        <div id="distanceValue" class="value-line"></div>
+      </div>
+
+      <div id="explain" class="explain"></div>
+
+      <div id="proof" class="proof"></div>
+    </aside>
+  </main>
+
+  <script>
+    const O = { x: 400, y: 325 };
+    const R = 220;
+
+    const $ = (id) => document.getElementById(id);
+
+    const mode1Btn = $("mode1Btn");
+    const mode2Btn = $("mode2Btn");
+    const mode1Group = $("mode1Group");
+    const mode2Group = $("mode2Group");
+    const control1 = $("control1");
+    const control2 = $("control2");
+    const heightSlider = $("heightSlider");
+    const distanceSlider = $("distanceSlider");
+
+    let mode = 1;
+
+    function setLine(id, x1, y1, x2, y2) {
+      const el = $(id);
+      el.setAttribute("x1", x1);
+      el.setAttribute("y1", y1);
+      el.setAttribute("x2", x2);
+      el.setAttribute("y2", y2);
+    }
+
+    function setCircle(id, x, y) {
+      const el = $(id);
+      el.setAttribute("cx", x);
+      el.setAttribute("cy", y);
+    }
+
+    function setText(id, x, y, text) {
+      const el = $(id);
+      el.setAttribute("x", x);
+      el.setAttribute("y", y);
+      if (text !== undefined) el.textContent = text;
+    }
+
+    function chordAtY(y) {
+      const dx = Math.sqrt(R * R - Math.pow(y - O.y, 2));
+      return {
+        A: { x: O.x - dx, y },
+        B: { x: O.x + dx, y },
+        H: { x: O.x, y },
+        length: 2 * dx,
+        distance: Math.abs(y - O.y)
+      };
+    }
+
+    function chordAtDistanceAndAngle(d, angleDeg) {
+      const theta = angleDeg * Math.PI / 180;
+      const normal = { x: Math.cos(theta), y: Math.sin(theta) };
+      const dir = { x: -Math.sin(theta), y: Math.cos(theta) };
+      const mid = { x: O.x + d * normal.x, y: O.y + d * normal.y };
+      const half = Math.sqrt(R * R - d * d);
+      return {
+        P1: { x: mid.x - half * dir.x, y: mid.y - half * dir.y },
+        P2: { x: mid.x + half * dir.x, y: mid.y + half * dir.y },
+        M: mid,
+        normal,
+        dir,
+        half,
+        length: 2 * half
+      };
+    }
+
+    function rightAnglePath(mid, dir, normal, size = 28) {
+      const p1 = { x: mid.x + dir.x * size, y: mid.y + dir.y * size };
+      const p2 = { x: p1.x - normal.x * size, y: p1.y - normal.y * size };
+      const p3 = { x: mid.x - normal.x * size, y: mid.y - normal.y * size };
+      return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y}`;
+    }
+
+    function drawDoubleTick(base, dir, offset) {
+      const n = { x: -dir.y, y: dir.x };
+      return {
+        a1: { x: base.x + dir.x * offset - n.x * 11, y: base.y + dir.y * offset - n.y * 11 },
+        a2: { x: base.x + dir.x * offset + n.x * 11, y: base.y + dir.y * offset + n.y * 11 }
+      };
+    }
+
+    function updateMode1() {
+      const y = O.y + Number(heightSlider.value);
+      const { A, B, H, length, distance } = chordAtY(y);
+
+      setLine("chordAB", A.x, A.y, B.x, B.y);
+      setLine("perpOH", O.x, O.y, H.x, H.y);
+      setLine("rOA", O.x, O.y, A.x, A.y);
+      setLine("rOB", O.x, O.y, B.x, B.y);
+
+      setCircle("pointA", A.x, A.y);
+      setCircle("pointB", B.x, B.y);
+      setCircle("pointH", H.x, H.y);
+
+      setText("labelA", A.x - 34, A.y - 14);
+      setText("labelB", B.x + 16, B.y - 14);
+      setText("labelH", H.x + 12, H.y + 32);
+      setText("labelAHHB", O.x - 62, y + (y < O.y ? -32 : 54));
+
+      $("rightAngle").setAttribute("d", rightAnglePath(H, { x: 1, y: 0 }, { x: 0, y: Math.sign(y - O.y) || 1 }, 28));
+
+      const tickY = y;
+      setLine("tickAH1", O.x - 64, tickY - 14, O.x - 52, tickY + 14);
+      setLine("tickAH2", O.x - 40, tickY - 14, O.x - 28, tickY + 14);
+      setLine("tickHB1", O.x + 28, tickY - 14, O.x + 40, tickY + 14);
+      setLine("tickHB2", O.x + 52, tickY - 14, O.x + 64, tickY + 14);
+
+      $("heightValue").textContent = `중심 O에서 현 AB까지의 거리: 약 ${Math.round(distance)} / 현 AB 길이: 약 ${Math.round(length)}`;
+      $("explain").innerHTML = `원의 중심 <strong>O</strong>에서 현 <strong>AB</strong>에 수선 <strong>OH</strong>를 내리면, 현과 수직으로 만나고 동시에 현을 둘로 나눕니다. 즉 <strong>OH ⟂ AB</strong>, <strong>AH = HB</strong>입니다.`;
+      $("proof").innerHTML = `
+        <h2>수업용 증명 흐름</h2>
+        <ol>
+          <li>OA와 OB는 같은 원의 반지름이므로 <strong>OA = OB</strong></li>
+          <li>OH는 두 삼각형에 공통으로 들어간다.</li>
+          <li>OH를 AB에 수선으로 내렸으므로 <strong>∠OHA = ∠OHB = 90°</strong></li>
+          <li>따라서 두 직각삼각형 △OHA, △OHB는 합동이다.</li>
+          <li>그러므로 대응변이 같아서 <strong>AH = HB</strong></li>
+        </ol>`;
+    }
+
+    function updateMode2() {
+      const d = Number(distanceSlider.value);
+      const chord1 = chordAtDistanceAndAngle(d, 180);  // left vertical chord
+      const chord2 = chordAtDistanceAndAngle(d, 0);    // right vertical chord
+
+      const A = chord1.P1;
+      const B = chord1.P2;
+      const H = chord1.M;
+      const C = chord2.P1;
+      const D = chord2.P2;
+      const K = chord2.M;
+
+      setLine("chordAB2", A.x, A.y, B.x, B.y);
+      setLine("chordCD2", C.x, C.y, D.x, D.y);
+      setLine("rOB2", O.x, O.y, B.x, B.y);
+      setLine("rOC2", O.x, O.y, C.x, C.y);
+      setLine("perpOH2", O.x, O.y, H.x, H.y);
+      setLine("perpOK2", O.x, O.y, K.x, K.y);
+
+      $("rightAngleH2").setAttribute("d", rightAnglePath(H, chord1.dir, chord1.normal, 24));
+      $("rightAngleK2").setAttribute("d", rightAnglePath(K, chord2.dir, chord2.normal, 24));
+
+      setCircle("pointA2", A.x, A.y);
+      setCircle("pointB2", B.x, B.y);
+      setCircle("pointC2", C.x, C.y);
+      setCircle("pointD2", D.x, D.y);
+      setCircle("pointH2", H.x, H.y);
+      setCircle("pointK2", K.x, K.y);
+
+      setText("labelA2", A.x - 34, A.y - 12);
+      setText("labelB2", B.x + 16, B.y - 12);
+      setText("labelC2", C.x - 36, C.y + 10);
+      setText("labelD2", D.x + 12, D.y + 10);
+      setText("labelH2", H.x + 12, H.y + 34);
+      setText("labelK2", K.x + 12, K.y + 34);
+      setText("labelEqualDist", O.x - 62, O.y + 62, "OH = OK");
+      setText("labelEqualChord", O.x - 78, O.y + 270, "AB = CD");
+
+      const midOH = { x: (O.x + H.x) / 2, y: (O.y + H.y) / 2 };
+      const midOK = { x: (O.x + K.x) / 2, y: (O.y + K.y) / 2 };
+
+      // OH, OK가 같은 길이라는 표시: 각 수선의 중간에 같은 눈금 2개씩 표시
+      setLine("distTickH1", midOH.x - 8, midOH.y - 16, midOH.x + 8, midOH.y + 16);
+      setLine("distTickH2", midOH.x + 8, midOH.y - 16, midOH.x + 24, midOH.y + 16);
+      setLine("distTickK1", midOK.x - 8, midOK.y - 16, midOK.x + 8, midOK.y + 16);
+      setLine("distTickK2", midOK.x + 8, midOK.y - 16, midOK.x + 24, midOK.y + 16);
+
+      $("distanceValue").textContent = `OH = OK = 약 ${Math.round(d)} / 두 현의 길이: 약 ${Math.round(chord1.length)}`;
+      $("explain").innerHTML = `두 현 <strong>AB</strong>, <strong>CD</strong>가 원의 중심 <strong>O</strong>로부터 같은 거리에 있으면, 두 현의 길이도 같습니다. 즉 <strong>OH = OK</strong>이면 <strong>AB = CD</strong>입니다.`;
+      $("proof").innerHTML = `
+        <h2>수업용 설명 흐름</h2>
+        <ol>
+          <li>중심에서 각 현에 수선을 내리면 각 현을 이등분한다.</li>
+          <li>OH = OK이므로 두 현은 중심에서 같은 거리만큼 떨어져 있다.</li>
+          <li>반지름은 같고, 중심에서 현까지의 거리도 같다.</li>
+          <li>따라서 생기는 직각삼각형의 나머지 한 변도 같다.</li>
+          <li>각 현의 절반이 같으므로 전체 길이도 같아 <strong>AB = CD</strong></li>
+        </ol>`;
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      const isMode1 = mode === 1;
+      mode1Btn.classList.toggle("active", isMode1);
+      mode2Btn.classList.toggle("active", !isMode1);
+      mode1Group.classList.toggle("hidden", !isMode1);
+      mode2Group.classList.toggle("hidden", isMode1);
+      control1.classList.toggle("hidden", !isMode1);
+      control2.classList.toggle("hidden", isMode1);
+      update();
+    }
+
+    function update() {
+      if (mode === 1) updateMode1();
+      else updateMode2();
+    }
+
+    mode1Btn.addEventListener("click", () => setMode(1));
+    mode2Btn.addEventListener("click", () => setMode(2));
+    heightSlider.addEventListener("input", update);
+    distanceSlider.addEventListener("input", update);
+
+    update();
+  </script>
+</body>
+</html>

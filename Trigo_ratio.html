@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>삼각비 슬라이더 시각화</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, 'Noto Sans KR', sans-serif;
+      background: #f4f6fb;
+      color: #222;
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 34px;
+    }
+
+    .subtitle {
+      margin-bottom: 20px;
+      font-size: 18px;
+      color: #555;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 800 / 560;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 1px solid #dde3ef;
+    }
+
+    .control-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .slider-row { margin-bottom: 22px; }
+
+    label {
+      display: block;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #2563eb;
+    }
+
+    .angle-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .angle-value {
+      font-size: 34px;
+      font-weight: 800;
+      color: #2563eb;
+    }
+
+    .angle-value.small {
+      color: #64748b;
+      font-size: 26px;
+    }
+
+    .standard-box {
+      margin: 18px 0;
+      padding: 16px;
+      border-radius: 16px;
+      background: #eef6ff;
+      border: 1px solid #bfdbfe;
+    }
+
+    .standard-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .radio-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .radio-option {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 14px;
+      background: white;
+      border: 2px solid #dbeafe;
+      font-size: 20px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .radio-option input {
+      width: 18px;
+      height: 18px;
+    }
+
+    .values {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .value-box {
+      border-radius: 16px;
+      padding: 16px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      font-size: 20px;
+    }
+
+    .value-box strong {
+      display: inline-block;
+      min-width: 80px;
+      font-size: 24px;
+    }
+
+    .sin { color: #dc2626; }
+    .cos { color: #2563eb; }
+    .tan { color: #9333ea; }
+
+    .formula {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 16px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      font-size: 20px;
+      line-height: 1.7;
+    }
+
+    .note {
+      margin-top: 14px;
+      color: #555;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      canvas { aspect-ratio: 800 / 560; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>삼각비 슬라이더</h1>
+    <div class="subtitle">반지름이 1인 사분원 위의 점을 움직이며 sin, cos, tan을 확인합니다.</div>
+
+    <div class="layout">
+      <div class="card">
+        <canvas id="canvas" width="800" height="560"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="control-title">각도 조절</div>
+
+        <div class="slider-row">
+          <label for="angleASlider">∠A</label>
+          <input id="angleASlider" type="range" min="0" max="90" value="55" step="1" />
+          <div class="angle-line">
+            <div class="angle-value">A = <span id="angleAText">55</span>°</div>
+            <div class="angle-value small">B = <span id="angleBText">35</span>°</div>
+          </div>
+        </div>
+
+        <div class="slider-row">
+          <label for="angleBSlider">∠B</label>
+          <input id="angleBSlider" type="range" min="0" max="90" value="35" step="1" />
+        </div>
+
+        <div class="standard-box">
+          <div class="standard-title">기준각 선택</div>
+          <div class="radio-row">
+            <label class="radio-option">
+              <input type="radio" name="standardAngle" value="A" checked /> 각 A 기준
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="standardAngle" value="B" /> 각 B 기준
+            </label>
+          </div>
+        </div>
+
+        <div class="values">
+          <div class="value-box"><strong class="sin">sin</strong><span id="standardSinLabel">A</span> = <span id="sinText"></span></div>
+          <div class="value-box"><strong class="cos">cos</strong><span id="standardCosLabel">A</span> = <span id="cosText"></span></div>
+          <div class="value-box"><strong class="tan">tan</strong><span id="standardTanLabel">A</span> = <span id="tanText"></span></div>
+        </div>
+
+        <div class="formula">
+          <div><span class="sin">sin 기준각</span> = 높이 ÷ 빗변</div>
+          <div><span class="cos">cos 기준각</span> = 밑변 ÷ 빗변</div>
+          <div><span class="tan">tan 기준각</span> = 기준각 쪽 접선 위의 길이</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const CANVAS_WIDTH = 800;
+    const CANVAS_HEIGHT = 560;
+
+    function setupCanvasScale() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = CANVAS_WIDTH * dpr;
+      canvas.height = CANVAS_HEIGHT * dpr;
+      canvas.style.width = '100%';
+      canvas.style.aspectRatio = `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    const angleASlider = document.getElementById('angleASlider');
+    const angleBSlider = document.getElementById('angleBSlider');
+
+    const angleAText = document.getElementById('angleAText');
+    const angleBText = document.getElementById('angleBText');
+    const sinText = document.getElementById('sinText');
+    const cosText = document.getElementById('cosText');
+    const tanText = document.getElementById('tanText');
+    const standardSinLabel = document.getElementById('standardSinLabel');
+    const standardCosLabel = document.getElementById('standardCosLabel');
+    const standardTanLabel = document.getElementById('standardTanLabel');
+
+    const COLORS = {
+      sin: '#dc2626',
+      cos: '#2563eb',
+      tan: '#9333ea',
+      hyp: '#111827',
+      guide: '#94a3b8',
+      angle: '#16a34a'
+    };
+
+    function degreeToRadian(degree) {
+      return degree * Math.PI / 180;
+    }
+
+    function getStandardAngle() {
+      return document.querySelector('input[name="standardAngle"]:checked').value;
+    }
+
+    function drawSide(x1, y1, x2, y2, color, width = 5) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    function drawDashedLine(x1, y1, x2, y2, color, width = 2) {
+      ctx.save();
+      ctx.setLineDash([8, 8]);
+      drawSide(x1, y1, x2, y2, color, width);
+      ctx.restore();
+    }
+
+    function drawLabel(text, x, y, color, size = 22) {
+      ctx.font = `bold ${size}px Arial`;
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+    }
+
+    function drawAngleArc(center, radius, startAngle, endAngle, color, label, labelX, labelY) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, radius, startAngle, endAngle, false);
+      ctx.stroke();
+      drawLabel(label, labelX, labelY, color, 22);
+    }
+
+    function formatTrigValue(kind, degree) {
+      if (kind === 'tan' && degree === 90) return '알 수 없다';
+      if (kind === 'tan' && degree === 0) return '0';
+      if (kind === 'sin' && degree === 0) return '0';
+      if (kind === 'sin' && degree === 90) return '1';
+      if (kind === 'cos' && degree === 0) return '1';
+      if (kind === 'cos' && degree === 90) return '0';
+
+      const rad = degreeToRadian(degree);
+      if (kind === 'sin') return Math.sin(rad).toFixed(3);
+      if (kind === 'cos') return Math.cos(rad).toFixed(3);
+      return Math.tan(rad).toFixed(3);
+    }
+
+    function getAnglesFromA(angleA) {
+      return {
+        angleA,
+        angleB: 90 - angleA,
+        radA: degreeToRadian(angleA)
+      };
+    }
+
+    function syncFromA() {
+      const a = Number(angleASlider.value);
+      angleBSlider.value = 90 - a;
+      draw();
+    }
+
+    function syncFromB() {
+      const b = Number(angleBSlider.value);
+      angleASlider.value = 90 - b;
+      draw();
+    }
+
+    function drawTangentForA(origin, radius, unitX, angleA, radA) {
+      const tanLineTop = { x: unitX.x, y: origin.y - radius * 1.55 };
+
+      drawSide(unitX.x, origin.y + 20, unitX.x, tanLineTop.y, COLORS.tan, 3);
+      drawLabel('tan A 표시선', unitX.x + 14, origin.y - radius * 1.25, COLORS.tan, 18);
+
+      if (angleA === 90) {
+        drawLabel('tan A: 알 수 없다', unitX.x + 14, tanLineTop.y + 26, COLORS.tan, 18);
+        return;
+      }
+
+      const tanPoint = { x: unitX.x, y: origin.y - radius * Math.tan(radA) };
+      const visibleTanY = Math.max(tanPoint.y, tanLineTop.y);
+      const visibleTanPoint = { x: tanPoint.x, y: visibleTanY };
+
+      drawDashedLine(origin.x, origin.y, visibleTanPoint.x, visibleTanPoint.y, COLORS.tan, 2);
+
+      if (tanPoint.y >= tanLineTop.y) {
+        drawSide(unitX.x, origin.y, tanPoint.x, tanPoint.y, COLORS.tan, 7);
+        ctx.fillStyle = COLORS.tan;
+        ctx.beginPath();
+        ctx.arc(tanPoint.x, tanPoint.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+        drawLabel('tan A', unitX.x + 16, (origin.y + tanPoint.y) / 2 - 8, COLORS.tan, 22);
+        drawLabel('(빗변의 기울기)', unitX.x + 16, (origin.y + tanPoint.y) / 2 + 16, COLORS.tan, 16);
+      } else {
+        drawLabel('tan A는 너무 큼', unitX.x + 14, tanLineTop.y + 26, COLORS.tan, 18);
+      }
+    }
+
+    function drawTangentForB(origin, radius, unitY, angleA, angleB, radA) {
+      const tanLineRight = { x: origin.x + radius * 1.75, y: unitY.y };
+
+      drawSide(origin.x - 20, unitY.y, tanLineRight.x, unitY.y, COLORS.tan, 3);
+      drawLabel('tan B 표시선', origin.x + radius * 1.18, unitY.y - 14, COLORS.tan, 18);
+
+      if (angleB === 90) {
+        drawLabel('tan B: 알 수 없다', origin.x + radius * 1.05, unitY.y + 30, COLORS.tan, 18);
+        return;
+      }
+
+      let tanBLength;
+      if (angleB === 0) {
+        tanBLength = 0;
+      } else if (angleA === 0) {
+        drawLabel('tan B: 알 수 없다', origin.x + radius * 1.05, unitY.y + 30, COLORS.tan, 18);
+        return;
+      } else {
+        tanBLength = radius / Math.tan(radA);
+      }
+
+      const tanPoint = { x: origin.x + tanBLength, y: unitY.y };
+      const visibleTanX = Math.min(tanPoint.x, tanLineRight.x);
+      const visibleTanPoint = { x: visibleTanX, y: tanPoint.y };
+
+      drawDashedLine(origin.x, origin.y, visibleTanPoint.x, visibleTanPoint.y, COLORS.tan, 2);
+
+      if (tanPoint.x <= tanLineRight.x) {
+        drawSide(origin.x, unitY.y, tanPoint.x, tanPoint.y, COLORS.tan, 7);
+        ctx.fillStyle = COLORS.tan;
+        ctx.beginPath();
+        ctx.arc(tanPoint.x, tanPoint.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+        drawLabel('tan B', (origin.x + tanPoint.x) / 2 - 20, unitY.y - 30, COLORS.tan, 22);
+        drawLabel('(빗변의 기울기)', (origin.x + tanPoint.x) / 2 - 54, unitY.y - 8, COLORS.tan, 16);
+      } else {
+        drawLabel('tan B는 너무 큼', origin.x + radius * 1.05, unitY.y + 30, COLORS.tan, 18);
+      }
+    }
+
+    function draw() {
+      const { angleA, angleB, radA } = getAnglesFromA(Number(angleASlider.value));
+      const standard = getStandardAngle();
+      const standardDeg = standard === 'A' ? angleA : angleB;
+
+      const radius = 250;
+      const origin = { x: 180, y: 455 };
+
+      const A = origin;
+      const B = { x: origin.x + radius * Math.cos(radA), y: origin.y };
+      const C = { x: origin.x + radius * Math.cos(radA), y: origin.y - radius * Math.sin(radA) };
+      const unitX = { x: origin.x + radius, y: origin.y };
+      const unitY = { x: origin.x, y: origin.y - radius };
+
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      ctx.strokeStyle = '#edf2f7';
+      ctx.lineWidth = 1;
+      for (let x = 40; x < CANVAS_WIDTH; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 30);
+        ctx.lineTo(x, CANVAS_HEIGHT - 30);
+        ctx.stroke();
+      }
+      for (let y = 40; y < CANVAS_HEIGHT; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(30, y);
+        ctx.lineTo(canvas.width - 30, y);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = 'rgba(37, 99, 235, 0.035)';
+      ctx.beginPath();
+      ctx.moveTo(origin.x, origin.y);
+      ctx.arc(origin.x, origin.y, radius, -Math.PI / 2, 0, false);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = COLORS.guide;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(origin.x, origin.y, radius, -Math.PI / 2, 0, false);
+      ctx.stroke();
+
+      drawSide(origin.x, origin.y, unitX.x, unitX.y, COLORS.guide, 3);
+      drawSide(origin.x, origin.y, unitY.x, unitY.y, COLORS.guide, 3);
+      drawLabel('0°', unitX.x + 12, unitX.y + 8, '#64748b', 20);
+      drawLabel('90°', unitY.x - 42, unitY.y - 12, '#64748b', 20);
+      // 반지름 표시: 도형 바깥쪽 점선 호
+      const radiusLabelArcX = origin.x - 18;
+      const radiusLabelTopY = unitY.y + 2;
+      const radiusLabelBottomY = origin.y - 2;
+      const radiusLabelMidY = (radiusLabelTopY + radiusLabelBottomY) / 2;
+
+      ctx.save();
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(radiusLabelArcX, radiusLabelBottomY);
+      ctx.quadraticCurveTo(
+        radiusLabelArcX - 85,
+        radiusLabelMidY,
+        radiusLabelArcX,
+        radiusLabelTopY
+      );
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(radiusLabelArcX - 92, radiusLabelMidY - 22, 98, 40);
+      ctx.font = 'bold 20px Arial';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('반지름 = 1', radiusLabelArcX - 80, radiusLabelMidY + 5);
+      ctx.restore();
+
+      if (standard === 'A') {
+        drawTangentForA(origin, radius, unitX, angleA, radA);
+      } else {
+        drawTangentForB(origin, radius, unitY, angleA, angleB, radA);
+      }
+
+      drawDashedLine(C.x, C.y, B.x, B.y, '#cbd5e1');
+      drawDashedLine(C.x, C.y, origin.x, C.y, '#cbd5e1');
+
+      ctx.fillStyle = 'rgba(37, 99, 235, 0.08)';
+      ctx.beginPath();
+      ctx.moveTo(A.x, A.y);
+      ctx.lineTo(B.x, B.y);
+      ctx.lineTo(C.x, C.y);
+      ctx.closePath();
+      ctx.fill();
+
+      if (standard === 'A') {
+        drawSide(A.x, A.y, B.x, B.y, COLORS.cos);
+        drawSide(B.x, B.y, C.x, C.y, COLORS.sin);
+      } else {
+        drawSide(B.x, B.y, C.x, C.y, COLORS.cos);
+        drawSide(A.x, A.y, B.x, B.y, COLORS.sin);
+      }
+      drawSide(A.x, A.y, C.x, C.y, COLORS.hyp, 6);
+
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(B.x - 22, B.y);
+      ctx.lineTo(B.x - 22, B.y - 22);
+      ctx.lineTo(B.x, B.y - 22);
+      ctx.stroke();
+
+      if (angleA > 0) {
+        drawAngleArc(A, 52, -radA, 0, standard === 'A' ? COLORS.angle : COLORS.guide, `A ${angleA}°`, A.x + 58, A.y - 12);
+      } else {
+        drawLabel('A 0°', A.x + 58, A.y - 12, standard === 'A' ? COLORS.angle : COLORS.guide, 22);
+      }
+
+      if (angleB > 0) {
+        drawAngleArc(C, 45, Math.PI / 2, Math.PI / 2 + degreeToRadian(angleB), standard === 'B' ? COLORS.angle : COLORS.guide, `B ${angleB}°`, C.x - 105, C.y + 46);
+      } else {
+        drawLabel('B 0°', C.x - 105, C.y + 46, standard === 'B' ? COLORS.angle : COLORS.guide, 22);
+      }
+
+      [A, B, C].forEach((p) => {
+        ctx.fillStyle = COLORS.hyp;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      drawLabel('A', A.x - 36, A.y + 8, COLORS.hyp, 24);
+      drawLabel('B', B.x + 14, B.y + 8, COLORS.hyp, 24);
+      drawLabel('C', C.x + 14, C.y - 10, COLORS.hyp, 24);
+
+      if (standard === 'A') {
+        drawLabel('밑변', (A.x + B.x) / 2 - 28, A.y + 30, COLORS.cos);
+        drawLabel(`(cos ${standard})`, (A.x + B.x) / 2 - 36, A.y + 54, COLORS.cos, 18);
+        drawLabel('높이', B.x + 18, (B.y + C.y) / 2 - 6, COLORS.sin);
+        drawLabel(`(sin ${standard})`, B.x + 18, (B.y + C.y) / 2 + 16, COLORS.sin, 18);
+      } else {
+        drawLabel('높이', (A.x + B.x) / 2 - 28, A.y + 30, COLORS.sin);
+        drawLabel(`(sin ${standard})`, (A.x + B.x) / 2 - 36, A.y + 54, COLORS.sin, 18);
+        drawLabel('밑변', B.x + 18, (B.y + C.y) / 2 - 6, COLORS.cos);
+        drawLabel(`(cos ${standard})`, B.x + 18, (B.y + C.y) / 2 + 16, COLORS.cos, 18);
+      }
+      drawLabel('빗변', (A.x + C.x) / 2 - 24, (A.y + C.y) / 2 - 20, COLORS.hyp);
+
+      ctx.font = '18px Arial';
+      ctx.fillStyle = '#444';
+      ctx.fillText(`현재 기준각: 각 ${standard}`, 40, 46);
+      ctx.fillText(standard === 'A' ? 'tan A는 오른쪽 접선 위에 표시됩니다.' : 'tan B는 위쪽 접선 위에 표시됩니다.', 40, 74);
+
+      angleAText.textContent = angleA;
+      angleBText.textContent = angleB;
+
+      standardSinLabel.textContent = standard;
+      standardCosLabel.textContent = standard;
+      standardTanLabel.textContent = standard;
+
+      sinText.textContent = formatTrigValue('sin', standardDeg);
+      cosText.textContent = formatTrigValue('cos', standardDeg);
+      tanText.textContent = formatTrigValue('tan', standardDeg);
+    }
+
+    function runTests() {
+      console.assert(getAnglesFromA(0).angleB === 90, 'A=0이면 B=90이어야 합니다.');
+      console.assert(getAnglesFromA(90).angleB === 0, 'A=90이면 B=0이어야 합니다.');
+      console.assert(formatTrigValue('sin', 0) === '0', 'sin 0°는 0이어야 합니다.');
+      console.assert(formatTrigValue('sin', 90) === '1', 'sin 90°는 1이어야 합니다.');
+      console.assert(formatTrigValue('cos', 0) === '1', 'cos 0°는 1이어야 합니다.');
+      console.assert(formatTrigValue('cos', 90) === '0', 'cos 90°는 0이어야 합니다.');
+      console.assert(formatTrigValue('tan', 0) === '0', 'tan 0°는 0이어야 합니다.');
+      console.assert(formatTrigValue('tan', 90) === '알 수 없다', 'tan 90°는 알 수 없다여야 합니다.');
+    }
+
+    angleASlider.addEventListener('input', syncFromA);
+    angleBSlider.addEventListener('input', syncFromB);
+    document.querySelectorAll('input[name="standardAngle"]').forEach((radio) => {
+      radio.addEventListener('change', draw);
+    });
+
+    runTests();
+    setupCanvasScale();
+    draw();
+
+    window.addEventListener('resize', () => {
+      setupCanvasScale();
+      draw();
+    });
+  </script>
+</body>
+</html>
