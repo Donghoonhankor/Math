@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>원주각과 중심각 시뮬레이터</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: "Pretendard", "Noto Sans KR", Arial, sans-serif;
+      background: #f7f7fb;
+      color: #1f2937;
+    }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 0;
+    }
+
+    .stage-wrap {
+      position: relative;
+      background: radial-gradient(circle at center, #ffffff 0%, #f3f4f6 100%);
+      border-right: 1px solid #d1d5db;
+      overflow: hidden;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    .panel {
+      padding: 24px;
+      background: #ffffff;
+      box-shadow: -4px 0 16px rgba(0, 0, 0, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      overflow-y: auto;
+      min-height: 0;
+      z-index: 5;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      padding: 18px;
+      background: #fafafa;
+    }
+
+    .big-formula {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 800;
+      padding: 14px 8px;
+      color: #111827;
+    }
+
+    .angle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 18px;
+      padding: 10px 0;
+      border-bottom: 1px dashed #d1d5db;
+    }
+
+    .angle-row:last-child {
+      border-bottom: 0;
+    }
+
+    .label-center {
+      color: #2563eb;
+      font-weight: 800;
+    }
+
+    .label-inscribed {
+      color: #dc2626;
+      font-weight: 800;
+    }
+
+    .angle-value {
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #111827;
+      color: white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+      box-shadow: none;
+    }
+
+    button.active {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .hint {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #4b5563;
+    }
+
+    .point {
+      cursor: grab;
+    }
+
+    .point:active {
+      cursor: grabbing;
+    }
+
+    .point-label {
+      font-size: 22px;
+      font-weight: 900;
+      fill: #111827;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+
+    .math-label {
+      font-size: 22px;
+      font-weight: 900;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+
+    .arc-label {
+      font-size: 18px;
+      font-weight: 800;
+      fill: #374151;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+
+    #inkCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .ink-ui {
+      position: fixed;
+      right: 92px;
+      bottom: 22px;
+      z-index: 30;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.94);
+      border: 1px solid #d1d5db;
+      border-radius: 18px;
+      padding: 10px 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+      backdrop-filter: blur(8px);
+    }
+
+    .ink-ui.on {
+      display: flex;
+    }
+
+    .color-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 3px solid #fff;
+      outline: 1px solid #9ca3af;
+      cursor: pointer;
+      padding: 0;
+      box-shadow: none;
+    }
+
+    .color-btn.selected {
+      outline: 3px solid #111827;
+    }
+
+    .thick-btn {
+      padding: 8px 10px;
+      font-size: 14px;
+      border-radius: 10px;
+      background: #e5e7eb;
+      color: #111827;
+      box-shadow: none;
+    }
+
+    .thick-btn.selected {
+      background: #111827;
+      color: white;
+    }
+
+    .clear-ink {
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 10px;
+      background: #ef4444;
+      color: white;
+      box-shadow: none;
+    }
+
+    .ink-toggle {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 31;
+      width: 58px;
+      height: 58px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #111827;
+      color: white;
+      font-size: 14px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+    }
+
+    .ink-toggle.on {
+      background: #f59e0b;
+      color: #111827;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="stage-wrap" id="stageWrap">
+      <svg id="svg" viewBox="0 0 1100 780">
+        <defs>
+          <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"></path>
+          </marker>
+          <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626"></path>
+          </marker>
+        </defs>
+
+        <circle id="circle" cx="470" cy="350" r="215" fill="white" stroke="#111827" stroke-width="5" />
+        <path id="minorArc" fill="none" stroke="#f59e0b" stroke-width="10" stroke-linecap="round" opacity="0.8" />
+
+        <line id="OA" stroke="#2563eb" stroke-width="5" stroke-linecap="round" />
+        <line id="OB" stroke="#2563eb" stroke-width="5" stroke-linecap="round" />
+        <line id="PA" stroke="#dc2626" stroke-width="5" stroke-linecap="round" />
+        <line id="PB" stroke="#dc2626" stroke-width="5" stroke-linecap="round" />
+        <line id="AB" stroke="#374151" stroke-width="3" stroke-dasharray="8 8" opacity="0.65" />
+        <line id="diameterPO" stroke="#7c3aed" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 8" style="display:none" />
+
+        <path id="centerAngleArc" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round" />
+        <path id="inscribedAngleArc" fill="none" stroke="#dc2626" stroke-width="5" stroke-linecap="round" />
+
+        <g id="proofMarks" style="display:none">
+          <path id="markAPO" fill="none" stroke="#16a34a" stroke-width="5" stroke-linecap="round" />
+          <path id="markOAP" fill="none" stroke="#16a34a" stroke-width="5" stroke-linecap="round" />
+          <path id="markOPB" fill="none" stroke="#ef4444" stroke-width="5" stroke-linecap="round" />
+          <path id="markOBP" fill="none" stroke="#ef4444" stroke-width="5" stroke-linecap="round" />
+          <circle id="dotAPO" r="8" fill="#16a34a" />
+          <circle id="dotOAP" r="8" fill="#16a34a" />
+          <circle id="dotAPB1" r="8" fill="#16a34a" />
+          <circle id="dotAPB2" r="8" fill="#16a34a" />
+          <path id="crossOPB" fill="none" stroke="#ef4444" stroke-width="5" stroke-linecap="round" />
+          <path id="crossOBP" fill="none" stroke="#ef4444" stroke-width="5" stroke-linecap="round" />
+          <path id="crossAPB1" fill="none" stroke="#ef4444" stroke-width="5" stroke-linecap="round" />
+          <path id="crossAPB2" fill="none" stroke="#ef4444" stroke-width="5" stroke-linecap="round" />
+        </g>
+
+        <text id="centerAngleLabel" class="math-label" fill="#2563eb"></text>
+        <text id="inscribedAngleLabel" class="math-label" fill="#dc2626"></text>
+        <text id="arcText" class="arc-label">호 AB</text>
+
+        <circle id="Opoint" cx="470" cy="350" r="7" fill="#111827" />
+        <text x="485" y="343" class="point-label">O</text>
+
+        <g id="dragA" class="point">
+          <circle id="Apoint" r="14" fill="#f59e0b" stroke="white" stroke-width="4" />
+          <text id="Alabel" class="point-label">A</text>
+        </g>
+        <g id="dragB" class="point">
+          <circle id="Bpoint" r="14" fill="#f59e0b" stroke="white" stroke-width="4" />
+          <text id="Blabel" class="point-label">B</text>
+        </g>
+        <g id="dragP" class="point">
+          <circle id="Ppoint" r="14" fill="#dc2626" stroke="white" stroke-width="4" />
+          <text id="Plabel" class="point-label">P</text>
+        </g>
+
+        <g id="Qgroup" style="display:none">
+          <circle id="Qpoint" r="10" fill="#7c3aed" stroke="white" stroke-width="3" />
+          <text id="Qlabel" class="point-label">Q</text>
+        </g>
+      </svg>
+      <canvas id="inkCanvas"></canvas>
+    </div>
+
+    <aside class="panel">
+      <div>
+        <div class="title">원주각과 중심각</div>
+        <div class="subtitle">A, B, P를 원 위에서 움직여 보면서 같은 호를 보는 중심각과 원주각의 관계를 확인합니다.</div>
+      </div>
+
+      <div class="card">
+        <div class="angle-row">
+          <span class="label-center">중심각 ∠AOB</span>
+          <span id="centerValue" class="angle-value">0°</span>
+        </div>
+        <div class="angle-row">
+          <span class="label-inscribed">원주각 ∠APB</span>
+          <span id="inscribedValue" class="angle-value">0°</span>
+        </div>
+        <div class="big-formula" id="formula">중심각 = 원주각 × 2</div>
+      </div>
+
+      <div class="controls">
+        <button id="modeSameArc" class="active">호 AB 고정 모드</button>
+        <button id="toggleAngles" class="secondary">각도 표시 숨기기</button>
+        <button id="toggleProof" class="secondary">증명 보기</button>
+        <button id="resetBtn" class="secondary">처음 위치로</button>
+      </div>
+
+      <div class="card hint" id="proofBox" style="display:none; flex-shrink:0;">
+        <b>증명 흐름</b><br />
+        <div id="proofText"></div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="ink-ui" id="inkUi">
+    <button class="color-btn selected" data-color="#111827" style="background:#111827"></button>
+    <button class="color-btn" data-color="#dc2626" style="background:#dc2626"></button>
+    <button class="color-btn" data-color="#2563eb" style="background:#2563eb"></button>
+    <button class="color-btn" data-color="#16a34a" style="background:#16a34a"></button>
+    <button class="thick-btn selected" data-width="3">얇게</button>
+    <button class="thick-btn" data-width="6">보통</button>
+    <button class="thick-btn" data-width="10">두껍게</button>
+    <button class="clear-ink" id="undoInk" style="background:#2563eb;">되돌리기</button>
+    <button class="clear-ink" id="clearInk">전체삭제</button>
+  </div>
+  <div class="ink-toggle" id="inkToggle">판서<br/>OFF</div>
+
+  <script>
+    const svg = document.getElementById('svg');
+    const cx = 470, cy = 350, r = 215;
+
+    const state = {
+      a: degToRad(145),
+      b: degToRad(35),
+      p: degToRad(265),
+      showGuides: true,
+      showAngles: true,
+      showProof: false,
+      sameArcMode: true,
+      dragging: null
+    };
+
+    const els = {
+      Apoint: document.getElementById('Apoint'),
+      Bpoint: document.getElementById('Bpoint'),
+      Ppoint: document.getElementById('Ppoint'),
+      Qpoint: document.getElementById('Qpoint'),
+      Qlabel: document.getElementById('Qlabel'),
+      Qgroup: document.getElementById('Qgroup'),
+      Alabel: document.getElementById('Alabel'),
+      Blabel: document.getElementById('Blabel'),
+      Plabel: document.getElementById('Plabel'),
+      OA: document.getElementById('OA'),
+      OB: document.getElementById('OB'),
+      PA: document.getElementById('PA'),
+      PB: document.getElementById('PB'),
+      AB: document.getElementById('AB'),
+      diameterPO: document.getElementById('diameterPO'),
+      minorArc: document.getElementById('minorArc'),
+      centerAngleArc: document.getElementById('centerAngleArc'),
+      inscribedAngleArc: document.getElementById('inscribedAngleArc'),
+      centerAngleLabel: document.getElementById('centerAngleLabel'),
+      inscribedAngleLabel: document.getElementById('inscribedAngleLabel'),
+      arcText: document.getElementById('arcText'),
+      centerValue: document.getElementById('centerValue'),
+      inscribedValue: document.getElementById('inscribedValue'),
+      formula: document.getElementById('formula'),
+      proofBox: document.getElementById('proofBox'),
+      proofText: document.getElementById('proofText'),
+      proofMarks: document.getElementById('proofMarks'),
+      markAPO: document.getElementById('markAPO'),
+      markOAP: document.getElementById('markOAP'),
+      markOPB: document.getElementById('markOPB'),
+      markOBP: document.getElementById('markOBP'),
+      dotAPO: document.getElementById('dotAPO'),
+      dotOAP: document.getElementById('dotOAP'),
+      dotAPB1: document.getElementById('dotAPB1'),
+      dotAPB2: document.getElementById('dotAPB2'),
+      crossOPB: document.getElementById('crossOPB'),
+      crossOBP: document.getElementById('crossOBP'),
+      crossAPB1: document.getElementById('crossAPB1'),
+      crossAPB2: document.getElementById('crossAPB2')
+    };
+
+    function degToRad(d) { return d * Math.PI / 180; }
+    function radToDeg(rad) { return rad * 180 / Math.PI; }
+    function norm(a) {
+      while (a < 0) a += Math.PI * 2;
+      while (a >= Math.PI * 2) a -= Math.PI * 2;
+      return a;
+    }
+    function pointOnCircle(angle) {
+      return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+    }
+    function setLine(line, p1, p2) {
+      line.setAttribute('x1', p1.x);
+      line.setAttribute('y1', p1.y);
+      line.setAttribute('x2', p2.x);
+      line.setAttribute('y2', p2.y);
+    }
+    function setPoint(circle, label, p, dx, dy) {
+      circle.setAttribute('cx', p.x);
+      circle.setAttribute('cy', p.y);
+      label.setAttribute('x', p.x + dx);
+      label.setAttribute('y', p.y + dy);
+    }
+    function arcPath(radius, start, end, forceLarge = false) {
+      start = norm(start); end = norm(end);
+      let delta = norm(end - start);
+      const largeArc = forceLarge || delta > Math.PI ? 1 : 0;
+      const p1 = { x: cx + radius * Math.cos(start), y: cy + radius * Math.sin(start) };
+      const p2 = { x: cx + radius * Math.cos(end), y: cy + radius * Math.sin(end) };
+      return `M ${p1.x} ${p1.y} A ${radius} ${radius} 0 ${largeArc} 1 ${p2.x} ${p2.y}`;
+    }
+    function angleBetweenSmall(a, b) {
+      let diff = Math.abs(norm(a) - norm(b));
+      if (diff > Math.PI) diff = Math.PI * 2 - diff;
+      return diff;
+    }
+    function midAngleSmall(a, b) {
+      a = norm(a); b = norm(b);
+      let diff = norm(b - a);
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      return norm(a + diff / 2);
+    }
+    function pointAngleFromSvg(evt) {
+      const pt = svg.createSVGPoint();
+      pt.x = evt.clientX;
+      pt.y = evt.clientY;
+      const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+      return Math.atan2(p.y - cy, p.x - cx);
+    }
+    function isOnMinorArc(p, a, b) {
+      p = norm(p); a = norm(a); b = norm(b);
+      const ab = norm(b - a);
+      const ap = norm(p - a);
+      if (ab <= Math.PI) return ap > 0 && ap < ab;
+      const ba = norm(a - b);
+      const bp = norm(p - b);
+      return !(bp > 0 && bp < ba);
+    }
+    function nearestOppositeArcAngle(p, a, b) {
+      p = norm(p); a = norm(a); b = norm(b);
+      const ab = norm(b - a);
+      const ba = norm(a - b);
+
+      // 작은 호가 a → b 방향일 때, 반대편 큰 호는 b → a 방향이다.
+      if (ab <= Math.PI) {
+        const bp = norm(p - b);
+        if (bp >= 0 && bp <= ba) return p;
+        return norm(midAngleSmall(a, b) + Math.PI);
+      }
+
+      // 작은 호가 b → a 방향일 때, 반대편 큰 호는 a → b 방향이다.
+      const ap = norm(p - a);
+      if (ap >= 0 && ap <= ab) return p;
+      return norm(midAngleSmall(a, b) + Math.PI);
+    }
+
+    function movePIfNeeded() {
+      if (!state.sameArcMode) return;
+      state.p = nearestOppositeArcAngle(state.p, state.a, state.b);
+    }
+
+    function update() {
+      movePIfNeeded();
+      const A = pointOnCircle(state.a);
+      const B = pointOnCircle(state.b);
+      const P = pointOnCircle(state.p);
+      const O = { x: cx, y: cy };
+
+      setPoint(els.Apoint, els.Alabel, A, -34, -18);
+      setPoint(els.Bpoint, els.Blabel, B, 18, -18);
+      setPoint(els.Ppoint, els.Plabel, P, 18, 28);
+
+      setLine(els.OA, O, A);
+      setLine(els.OB, O, B);
+      setLine(els.PA, P, A);
+      setLine(els.PB, P, B);
+      setLine(els.AB, A, B);
+      const PAngle = Math.atan2(P.y - O.y, P.x - O.x);
+      const Popp = { x: O.x - r * Math.cos(PAngle), y: O.y - r * Math.sin(PAngle) };
+      setLine(els.diameterPO, P, Popp);
+      els.Qgroup.style.display = state.showProof ? '' : 'none';
+      els.Qpoint.setAttribute('cx', Popp.x);
+      els.Qpoint.setAttribute('cy', Popp.y);
+      els.Qlabel.setAttribute('x', Popp.x + 16);
+      els.Qlabel.setAttribute('y', Popp.y - 12);
+
+      els.OA.style.display = state.showGuides ? '' : 'none';
+      els.OB.style.display = state.showGuides ? '' : 'none';
+      els.PA.style.display = state.showGuides ? '' : 'none';
+      els.PB.style.display = state.showGuides ? '' : 'none';
+      els.AB.style.display = state.showGuides ? '' : 'none';
+      els.diameterPO.style.display = state.showProof ? '' : 'none';
+
+      const centerAngle = angleBetweenSmall(state.a, state.b);
+      const inscribedAngle = centerAngle / 2;
+      const centerDeg = Math.round(radToDeg(centerAngle));
+      const inscribedDeg = Math.round(radToDeg(inscribedAngle));
+
+      const start = norm(state.a);
+      const end = norm(state.b);
+      let delta = norm(end - start);
+      let arcStart = start, arcEnd = end;
+      if (delta > Math.PI) { arcStart = end; arcEnd = start; }
+
+      els.minorArc.setAttribute('d', arcPath(r, arcStart, arcEnd));
+      els.centerAngleArc.setAttribute('d', arcPath(72, arcStart, arcEnd));
+      els.centerAngleArc.style.display = state.showAngles ? '' : 'none';
+
+      const mid = midAngleSmall(state.a, state.b);
+      const arcLabelPoint = { x: cx + (r + 32) * Math.cos(mid), y: cy + (r + 32) * Math.sin(mid) };
+      els.arcText.setAttribute('x', arcLabelPoint.x - 45);
+      els.arcText.setAttribute('y', arcLabelPoint.y);
+
+      const centerLabelPoint = { x: cx + 105 * Math.cos(mid), y: cy + 105 * Math.sin(mid) };
+      els.centerAngleLabel.setAttribute('x', centerLabelPoint.x - 24);
+      els.centerAngleLabel.setAttribute('y', centerLabelPoint.y + 8);
+      els.centerAngleLabel.textContent = `${centerDeg}°`;
+      els.centerAngleLabel.style.display = state.showAngles ? '' : 'none';
+
+      drawInscribedAngleArc(P, A, B, inscribedDeg);
+      drawProofMarks(O, A, B, P);
+      els.inscribedAngleArc.style.display = state.showAngles ? '' : 'none';
+      els.inscribedAngleLabel.style.display = state.showAngles ? '' : 'none';
+
+      els.centerValue.textContent = `${centerDeg}°`;
+      els.inscribedValue.textContent = `${inscribedDeg}°`;
+      els.formula.textContent = `${centerDeg}° = ${inscribedDeg}° × 2`;
+
+      els.proofBox.style.display = state.showProof ? '' : 'none';
+      if (state.showProof) {
+        const baseAngle = Math.round((180 - inscribedDeg) / 2);
+        els.proofText.innerHTML = `
+          ① OA = OP, OB = OP 이므로<br />
+          △OAP와 △OBP는 이등변삼각형이다.<br /><br />
+          ② OP를 지름으로 연장해서 본다.<br />
+          POA의 외각은 초록 동그라미 2개,<br />
+          POB의 외각은 빨간 X 2개가 된다.<br /><br />
+          원주각 ∠APB 안에는<br />
+          초록 동그라미 1개 + 빨간 X 1개가 들어간다.<br />
+          현재 원주각 ∠APB = ${inscribedDeg}°<br /><br />
+          ③ Q는 OP를 연장한 지름의 반대편 점이다.<br />
+          중심각 ∠AOB는<br />
+          ∠AOP의 외각 + ∠BOP의 외각으로 볼 수 있다.<br /><br />
+          그런데 각각의 외각은 원주각 조각의 2배이므로<br />
+          중심각 ∠AOB = ${centerDeg}° = 2 × ${inscribedDeg}°<br /><br />
+          따라서 <b>∠AOB = 2 × ∠APB</b><br />
+          즉, <b>원주각은 중심각의 절반</b>이다.
+        `;
+      }
+    }
+
+    function localAngleArc(vertex, p1, p2, radius) {
+      const v1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
+      const v2 = Math.atan2(p2.y - vertex.y, p2.x - vertex.x);
+      let diff = norm(v2 - v1);
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      const start = { x: vertex.x + radius * Math.cos(v1), y: vertex.y + radius * Math.sin(v1) };
+      const end = { x: vertex.x + radius * Math.cos(v1 + diff), y: vertex.y + radius * Math.sin(v1 + diff) };
+      const large = Math.abs(diff) > Math.PI ? 1 : 0;
+      const sweep = diff > 0 ? 1 : 0;
+      return {
+        d: `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${large} ${sweep} ${end.x} ${end.y}`,
+        mid: { x: vertex.x + (radius + 10) * Math.cos(v1 + diff / 2), y: vertex.y + (radius + 10) * Math.sin(v1 + diff / 2) }
+      };
+    }
+
+    function crossMark(x, y, size = 8) {
+      return `M ${x - size} ${y - size} L ${x + size} ${y + size} M ${x + size} ${y - size} L ${x - size} ${y + size}`;
+    }
+
+    function drawProofMarks(O, A, B, P) {
+      els.proofMarks.style.display = state.showProof ? '' : 'none';
+      if (!state.showProof) return;
+
+      const pAngle = Math.atan2(P.y - O.y, P.x - O.x);
+      const Q = { x: O.x - r * Math.cos(pAngle), y: O.y - r * Math.sin(pAngle) };
+
+      // 원주각 ∠APB는 지름 PO에 의해 두 조각으로 나뉜다.
+      // 왼쪽 조각: 동그라미 1개, 오른쪽 조각: X 1개
+      const apbCircle = localAngleArc(P, A, O, 58);
+      const apbCross = localAngleArc(P, O, B, 58);
+      els.dotAPB1.setAttribute('cx', apbCircle.mid.x);
+      els.dotAPB1.setAttribute('cy', apbCircle.mid.y);
+      els.crossAPB1.setAttribute('d', crossMark(apbCross.mid.x, apbCross.mid.y, 8));
+
+      // 각 OAP 위치: 동그라미 표시
+      const angleOAP = localAngleArc(A, O, P, 38);
+      els.dotAPO.setAttribute('cx', angleOAP.mid.x);
+      els.dotAPO.setAttribute('cy', angleOAP.mid.y);
+
+      // POA의 외각: 동그라미 2개
+      const poaExterior = localAngleArc(O, Q, A, 78);
+      const circleMid = poaExterior.mid;
+      const circleDir = Math.atan2(circleMid.y - O.y, circleMid.x - O.x) + Math.PI / 2;
+      els.dotOAP.setAttribute('cx', circleMid.x + 10 * Math.cos(circleDir));
+      els.dotOAP.setAttribute('cy', circleMid.y + 10 * Math.sin(circleDir));
+
+      // 각 OBP 위치: X 표시
+      const angleOBP = localAngleArc(B, P, O, 38);
+      els.crossOPB.setAttribute('d', crossMark(angleOBP.mid.x, angleOBP.mid.y, 7));
+
+      // POB의 외각: X 2개
+      const pobExterior = localAngleArc(O, B, Q, 108);
+      const crossMid = pobExterior.mid;
+      const crossDir = Math.atan2(crossMid.y - O.y, crossMid.x - O.x) + Math.PI / 2;
+      els.crossOBP.setAttribute('d', crossMark(crossMid.x + 12 * Math.cos(crossDir), crossMid.y + 12 * Math.sin(crossDir), 8));
+
+      // 외각 자체를 얇은 호로 강조한다.
+      els.markOAP.setAttribute('d', poaExterior.d);
+      els.markOBP.setAttribute('d', pobExterior.d);
+
+      // 원주각 조각도 얇은 호로 강조한다.
+      els.markAPO.setAttribute('d', apbCircle.d);
+      els.markOPB.setAttribute('d', apbCross.d);
+
+      // 사용하지 않는 추가 표시는 숨긴다.
+      els.dotAPB2.setAttribute('cx', circleMid.x - 10 * Math.cos(circleDir));
+      els.dotAPB2.setAttribute('cy', circleMid.y - 10 * Math.sin(circleDir));
+      els.crossAPB2.setAttribute('d', crossMark(crossMid.x - 12 * Math.cos(crossDir), crossMid.y - 12 * Math.sin(crossDir), 8));
+    }
+
+    function drawInscribedAngleArc(P, A, B, deg) {
+      const v1 = Math.atan2(A.y - P.y, A.x - P.x);
+      const v2 = Math.atan2(B.y - P.y, B.x - P.x);
+      let diff = norm(v2 - v1);
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      const radius = 52;
+      const p1 = { x: P.x + radius * Math.cos(v1), y: P.y + radius * Math.sin(v1) };
+      const p2 = { x: P.x + radius * Math.cos(v1 + diff), y: P.y + radius * Math.sin(v1 + diff) };
+      const large = Math.abs(diff) > Math.PI ? 1 : 0;
+      const sweep = diff > 0 ? 1 : 0;
+      els.inscribedAngleArc.setAttribute('d', `M ${p1.x} ${p1.y} A ${radius} ${radius} 0 ${large} ${sweep} ${p2.x} ${p2.y}`);
+      const mid = v1 + diff / 2;
+      els.inscribedAngleLabel.setAttribute('x', P.x + 80 * Math.cos(mid) - 22);
+      els.inscribedAngleLabel.setAttribute('y', P.y + 80 * Math.sin(mid) + 8);
+      els.inscribedAngleLabel.textContent = `${deg}°`;
+    }
+
+    ['dragA','dragB','dragP'].forEach(id => {
+      document.getElementById(id).addEventListener('pointerdown', e => {
+        state.dragging = id.replace('drag','').toLowerCase();
+        svg.setPointerCapture(e.pointerId);
+      });
+    });
+
+    svg.addEventListener('pointermove', e => {
+      if (!state.dragging) return;
+      const ang = norm(pointAngleFromSvg(e));
+      if (state.dragging === 'p' && state.sameArcMode) {
+        state.p = nearestOppositeArcAngle(ang, state.a, state.b);
+      } else {
+        state[state.dragging] = ang;
+      }
+      update();
+    });
+
+    svg.addEventListener('pointerup', e => {
+      state.dragging = null;
+      try { svg.releasePointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    document.getElementById('modeSameArc').addEventListener('click', () => {
+      state.sameArcMode = !state.sameArcMode;
+      document.getElementById('modeSameArc').classList.toggle('active', state.sameArcMode);
+      document.getElementById('modeSameArc').textContent = state.sameArcMode ? '호 AB 고정 모드' : '자유 이동 모드';
+      update();
+    });
+
+    document.getElementById('toggleAngles').addEventListener('click', () => {
+      state.showAngles = !state.showAngles;
+      document.getElementById('toggleAngles').textContent = state.showAngles ? '각도 표시 숨기기' : '각도 표시 보이기';
+      update();
+    });
+
+    document.getElementById('toggleProof').addEventListener('click', () => {
+      state.showProof = !state.showProof;
+      document.getElementById('toggleProof').classList.toggle('active', state.showProof);
+      document.getElementById('toggleProof').textContent = state.showProof ? '증명 숨기기' : '증명 보기';
+      update();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      state.a = degToRad(145);
+      state.b = degToRad(35);
+      state.p = degToRad(265);
+      update();
+    });
+
+    update();
+
+    // 판서 기능
+    const canvas = document.getElementById('inkCanvas');
+    const ctx = canvas.getContext('2d');
+    const inkToggle = document.getElementById('inkToggle');
+    const inkUi = document.getElementById('inkUi');
+    let inkWidth = 3;
+    let inkOn = false;
+    let drawing = false;
+    let inkColor = '#111827';
+    let strokeHistory = [];
+    let currentStroke = null;
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const old = document.createElement('canvas');
+      old.width = canvas.width;
+      old.height = canvas.height;
+      old.getContext('2d').drawImage(canvas, 0, 0);
+      canvas.width = Math.floor(rect.width * window.devicePixelRatio);
+      canvas.height = Math.floor(rect.height * window.devicePixelRatio);
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+      ctx.drawImage(old, 0, 0, old.width / window.devicePixelRatio, old.height / window.devicePixelRatio);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function canvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    inkToggle.addEventListener('click', () => {
+      inkOn = !inkOn;
+      canvas.style.pointerEvents = inkOn ? 'auto' : 'none';
+      inkToggle.classList.toggle('on', inkOn);
+      inkUi.classList.toggle('on', inkOn);
+      inkToggle.innerHTML = inkOn ? '판서<br/>ON' : '판서<br/>OFF';
+    });
+
+    canvas.addEventListener('pointerdown', e => {
+      if (!inkOn) return;
+      drawing = true;
+      const p = canvasPos(e);
+      currentStroke = {
+        color: inkColor,
+        width: inkWidth,
+        points: [p]
+      };
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    });
+
+    canvas.addEventListener('pointermove', e => {
+      if (!drawing || !inkOn) return;
+      const p = canvasPos(e);
+      currentStroke.points.push(p);
+      ctx.lineTo(p.x, p.y);
+      ctx.strokeStyle = currentStroke.color;
+      ctx.lineWidth = currentStroke.width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    });
+
+    canvas.addEventListener('pointerup', () => {
+      if (drawing && currentStroke) {
+        strokeHistory.push(currentStroke);
+      }
+      drawing = false;
+      currentStroke = null;
+    });
+    canvas.addEventListener('pointerleave', () => { drawing = false; });
+
+    document.querySelectorAll('.color-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        inkColor = btn.dataset.color;
+      });
+    });
+
+    document.querySelectorAll('.thick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.thick-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        inkWidth = Number(btn.dataset.width);
+      });
+    });
+
+    function redrawAllStrokes() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      strokeHistory.forEach(stroke => {
+        if (!stroke.points.length) return;
+        ctx.beginPath();
+        ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+        for (let i = 1; i < stroke.points.length; i++) {
+          ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+        }
+        ctx.strokeStyle = stroke.color;
+        ctx.lineWidth = stroke.width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      });
+    }
+
+    document.getElementById('undoInk').addEventListener('click', () => {
+      strokeHistory.pop();
+      redrawAllStrokes();
+    });
+
+    document.getElementById('clearInk').addEventListener('click', () => {
+      strokeHistory = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  </script>
+</body>
+</html>
