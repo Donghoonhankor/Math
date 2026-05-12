@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>원주각과 중심각</title>
+  <style>
+    :root {
+      --accent: #2563eb;
+      --accent2: #dc2626;
+      --ink: #111827;
+      --line: #d6dbe5;
+      --paper: #ffffff;
+      --bg: #f4f6f9;
+      --text: #172033;
+      --muted: #667085;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .deck {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: var(--paper);
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      padding: 72px 76px 86px;
+      background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    .slide-title {
+      font-size: 54px;
+      line-height: 1.12;
+      margin: 0;
+      letter-spacing: 0;
+      font-weight: 900;
+    }
+
+    .slide-subtitle {
+      margin: 20px 0 0;
+      max-width: 980px;
+      font-size: 28px;
+      line-height: 1.42;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .title-slide {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .title-inner {
+      max-width: 1120px;
+    }
+
+    .badges {
+      margin-top: 36px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 18px;
+      font-weight: 800;
+      background: #fff;
+    }
+
+    .content-slide {
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .content-list {
+      margin: 34px 0 0;
+      padding: 0;
+      max-width: 1120px;
+      list-style: none;
+      display: grid;
+      gap: 22px;
+    }
+
+    .content-list li {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 18px;
+      align-items: start;
+      font-size: 31px;
+      line-height: 1.42;
+      font-weight: 700;
+    }
+
+    .content-list li::before {
+      content: "";
+      width: 20px;
+      height: 20px;
+      margin-top: 13px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 9px rgba(37, 99, 235, 0.12);
+    }
+
+    .callout {
+      width: fit-content;
+      margin-top: 42px;
+      padding: 20px 28px;
+      border-left: 9px solid var(--accent2);
+      background: #fff;
+      font-size: 34px;
+      font-weight: 900;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .interactive-slide {
+      padding: 0;
+      background: #f5f7fb;
+    }
+
+    .image-slide {
+      padding: 0;
+      background: #111827;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .image-viewport {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+    }
+
+    .image-viewport.dragging {
+      cursor: grabbing;
+    }
+
+    .image-slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #f8fafc;
+      transform-origin: center center;
+      will-change: transform;
+    }
+
+    .image-caption {
+      position: absolute;
+      left: 24px;
+      top: 18px;
+      max-width: calc(100% - 48px);
+      padding: 9px 13px;
+      border-radius: 8px;
+      background: rgba(17, 24, 39, 0.78);
+      color: #fff;
+      font-weight: 850;
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .image-zoom-controls {
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      z-index: 8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(17, 24, 39, 0.78);
+      color: #fff;
+      backdrop-filter: blur(8px);
+    }
+
+    .image-zoom-controls button {
+      width: 38px;
+      height: 34px;
+      padding: 0;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+      box-shadow: none;
+    }
+
+    .image-zoom-value {
+      min-width: 56px;
+      text-align: center;
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .tool-slide {
+      padding: 0;
+      background: #fff;
+    }
+
+    .tool-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #fff;
+    }
+
+    .interactive-layout {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+    }
+
+    .stage-wrap {
+      position: relative;
+      min-width: 0;
+      background: radial-gradient(circle at center, #ffffff 0%, #eef2f7 100%);
+      border-right: 1px solid var(--line);
+    }
+
+    .stage-wrap svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .panel {
+      padding: 28px 24px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.22;
+      letter-spacing: 0;
+    }
+
+    .panel p {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .readout {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: #fbfcfe;
+    }
+
+    .angle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--line);
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .angle-row:last-child {
+      border-bottom: 0;
+    }
+
+    .center-label { color: var(--accent); }
+    .inscribed-label { color: var(--accent2); }
+
+    .angle-value {
+      font-size: 25px;
+      font-weight: 950;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .formula {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      text-align: center;
+      font-size: 25px;
+      font-weight: 950;
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-weight: 850;
+      cursor: pointer;
+      background: var(--ink);
+      color: white;
+    }
+
+    button.secondary {
+      background: #e9edf5;
+      color: var(--text);
+    }
+
+    button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .proof-box {
+      display: none;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 15px;
+      background: #fff;
+      font-size: 15px;
+      line-height: 1.55;
+      color: #334155;
+      overflow: auto;
+    }
+
+    .proof-box.on {
+      display: block;
+    }
+
+    .point {
+      cursor: grab;
+    }
+
+    .point:active {
+      cursor: grabbing;
+    }
+
+    .point-label,
+    .math-label,
+    .arc-label {
+      font-weight: 950;
+      paint-order: stroke;
+      stroke: white;
+      stroke-linejoin: round;
+    }
+
+    .point-label {
+      font-size: 22px;
+      fill: var(--text);
+      stroke-width: 5px;
+    }
+
+    .math-label {
+      font-size: 22px;
+      stroke-width: 5px;
+    }
+
+    .arc-label {
+      font-size: 18px;
+      fill: #475467;
+      stroke-width: 4px;
+    }
+
+    .toolbar {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 10px 32px rgba(15, 23, 42, 0.18);
+      backdrop-filter: blur(8px);
+      max-width: min(560px, calc(100vw - 36px));
+    }
+
+    .toolbar button {
+      min-width: 46px;
+      height: 44px;
+      padding: 0 13px;
+      border-radius: 8px;
+      font-size: 15px;
+      background: #111827;
+      color: #fff;
+    }
+
+    .toolbar button.tool {
+      background: #edf1f7;
+      color: #111827;
+    }
+
+    .toolbar button.on {
+      background: #f59e0b;
+      color: #111827;
+    }
+
+    .slide-count {
+      min-width: 76px;
+      text-align: center;
+      font-weight: 900;
+      color: #334155;
+      font-size: 15px;
+    }
+
+    .palette {
+      display: flex;
+      gap: 6px;
+      padding-left: 4px;
+      border-left: 1px solid var(--line);
+    }
+
+    .thickness {
+      display: flex;
+      gap: 6px;
+      padding-left: 4px;
+      border-left: 1px solid var(--line);
+    }
+
+    .thick-btn.selected {
+      background: #111827;
+      color: #fff;
+    }
+
+    .color-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      padding: 0;
+      border: 3px solid white;
+      outline: 1px solid #94a3b8;
+      box-shadow: none;
+      min-width: 0;
+    }
+
+    .color-btn.selected {
+      outline: 3px solid #111827;
+    }
+
+    #inkCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 40;
+      pointer-events: none;
+    }
+
+    .ink-on #inkCanvas {
+      pointer-events: auto;
+    }
+
+    @media (max-width: 980px) {
+      .slide {
+        padding: 56px 30px 86px;
+      }
+
+      .slide-title {
+        font-size: 40px;
+      }
+
+      .slide-subtitle,
+      .content-list li {
+        font-size: 23px;
+      }
+
+      .interactive-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+      }
+
+      .panel {
+        max-height: 34vh;
+        overflow: auto;
+        border-top: 1px solid var(--line);
+      }
+    }
+
+    @media print {
+      body {
+        overflow: visible;
+      }
+
+      .deck {
+        height: auto;
+      }
+
+      .slide {
+        position: relative;
+        display: flex !important;
+        page-break-after: always;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .toolbar,
+      #inkCanvas {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" id="deck">
+    <section class="slide title-slide active" data-slide="0">
+      <div class="title-inner">
+        <h1 class="slide-title">삼 각 비</h1>
+        <p class="slide-subtitle">각도로 길이를 재는 기술</p>
+        
+      </div>
+    </section>
+    <section class="slide image-slide" data-slide="1">
+      <div class="image-viewport" data-image-viewport>
+        <img class="image-page" src="assets/1778599948_1_1_1778599948/page-001.png" alt="1-1 1쪽" />
+      </div>
+      <div class="image-zoom-controls" aria-label="PDF 확대 도구">
+        <button data-zoom-out title="축소">−</button>
+        <span class="image-zoom-value" data-zoom-value>100%</span>
+        <button data-zoom-in title="확대">+</button>
+        <button data-zoom-reset title="초기화">1:1</button>
+      </div>
+      <div class="image-caption">1-1 1쪽</div>
+    </section>
+    <section class="slide image-slide" data-slide="2">
+      <div class="image-viewport" data-image-viewport>
+        <img class="image-page" src="assets/1778600003_1_2_1778600003/page-001.png" alt="1-2 1쪽" />
+      </div>
+      <div class="image-zoom-controls" aria-label="PDF 확대 도구">
+        <button data-zoom-out title="축소">−</button>
+        <span class="image-zoom-value" data-zoom-value>100%</span>
+        <button data-zoom-in title="확대">+</button>
+        <button data-zoom-reset title="초기화">1:1</button>
+      </div>
+      <div class="image-caption">1-2 1쪽</div>
+    </section>
+    <section class="slide image-slide" data-slide="3">
+      <div class="image-viewport" data-image-viewport>
+        <img class="image-page" src="assets/1778600038_1_3_1778600038/page-001.png" alt="1-3 1쪽" />
+      </div>
+      <div class="image-zoom-controls" aria-label="PDF 확대 도구">
+        <button data-zoom-out title="축소">−</button>
+        <span class="image-zoom-value" data-zoom-value>100%</span>
+        <button data-zoom-in title="확대">+</button>
+        <button data-zoom-reset title="초기화">1:1</button>
+      </div>
+      <div class="image-caption">1-3 1쪽</div>
+    </section>
+    <section class="slide image-slide" data-slide="4">
+      <div class="image-viewport" data-image-viewport>
+        <img class="image-page" src="assets/1778600041_1_4_1778600041/page-001.png" alt="1-4 1쪽" />
+      </div>
+      <div class="image-zoom-controls" aria-label="PDF 확대 도구">
+        <button data-zoom-out title="축소">−</button>
+        <span class="image-zoom-value" data-zoom-value>100%</span>
+        <button data-zoom-in title="확대">+</button>
+        <button data-zoom-reset title="초기화">1:1</button>
+      </div>
+      <div class="image-caption">1-4 1쪽</div>
+    </section>
+    <section class="slide tool-slide" data-slide="5">
+      <iframe class="tool-frame" src="tools/1778599887/Trigo_ratio.html" title="Trigo_ratio" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"></iframe>
+    </section>
+  </main>
+  <canvas id="inkCanvas"></canvas>
+  <nav class="toolbar" aria-label="수업 도구">
+    <button id="prevSlide" title="이전 슬라이드">‹</button>
+    <span class="slide-count" id="slideCount"></span>
+    <button id="nextSlide" title="다음 슬라이드">›</button>
+    <button class="tool" id="inkToggle" title="판서 켜기">펜</button>
+    <button class="tool" id="undoInk" title="마지막 판서 되돌리기">↶</button>
+    <button class="tool" id="clearInk" title="판서 전체 지우기">지움</button>
+    <div class="thickness" aria-label="펜 두께">
+      <button class="tool thick-btn selected" data-width="3">얇게</button>
+      <button class="tool thick-btn" data-width="6">보통</button>
+      <button class="tool thick-btn" data-width="10">두껍게</button>
+    </div>
+    <div class="palette" aria-label="펜 색상">
+      <button class="color-btn selected" data-color="#111827" style="background:#111827" title="검정"></button>
+      <button class="color-btn" data-color="#dc2626" style="background:#dc2626" title="빨강"></button>
+      <button class="color-btn" data-color="#2563eb" style="background:#2563eb" title="파랑"></button>
+      <button class="color-btn" data-color="#16a34a" style="background:#16a34a" title="초록"></button>
+      <button class="color-btn" data-color="#f59e0b" style="background:#f59e0b" title="주황"></button>
+      <button class="color-btn" data-color="#7c3aed" style="background:#7c3aed" title="보라"></button>
+    </div>
+  </nav>
+  <script>
+
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    let currentSlide = 0;
+    const slideCountEl = document.getElementById("slideCount");
+
+    function showSlide(index) {
+      currentSlide = Math.max(0, Math.min(slides.length - 1, index));
+      slides.forEach((slide, i) => slide.classList.toggle("active", i === currentSlide));
+      slideCountEl.textContent = (currentSlide + 1) + " / " + slides.length;
+    }
+
+    document.getElementById("prevSlide").addEventListener("click", () => showSlide(currentSlide - 1));
+    document.getElementById("nextSlide").addEventListener("click", () => showSlide(currentSlide + 1));
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") showSlide(currentSlide - 1);
+      if (event.key === "ArrowRight" || event.key === " ") showSlide(currentSlide + 1);
+    });
+    showSlide(0);
+
+    const inkCanvas = document.getElementById("inkCanvas");
+    const inkCtx = inkCanvas.getContext("2d");
+    const inkToggle = document.getElementById("inkToggle");
+    let inkOn = false;
+    let drawing = false;
+    let inkColor = "#111827";
+    let inkWidth = 4;
+    let strokes = [];
+    let currentStroke = null;
+
+    function resizeInkCanvas() {
+      const old = document.createElement("canvas");
+      old.width = inkCanvas.width;
+      old.height = inkCanvas.height;
+      old.getContext("2d").drawImage(inkCanvas, 0, 0);
+      inkCanvas.width = Math.floor(window.innerWidth * window.devicePixelRatio);
+      inkCanvas.height = Math.floor(window.innerHeight * window.devicePixelRatio);
+      inkCanvas.style.width = window.innerWidth + "px";
+      inkCanvas.style.height = window.innerHeight + "px";
+      inkCtx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+      inkCtx.drawImage(old, 0, 0, old.width / window.devicePixelRatio, old.height / window.devicePixelRatio);
+    }
+
+    function pointerPos(event) {
+      const rect = inkCanvas.getBoundingClientRect();
+      return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    }
+
+    function redrawInk() {
+      inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
+      for (const stroke of strokes) {
+        if (!stroke.points.length) continue;
+        inkCtx.beginPath();
+        inkCtx.moveTo(stroke.points[0].x, stroke.points[0].y);
+        for (let i = 1; i < stroke.points.length; i += 1) inkCtx.lineTo(stroke.points[i].x, stroke.points[i].y);
+        inkCtx.strokeStyle = stroke.color;
+        inkCtx.lineWidth = stroke.width;
+        inkCtx.lineCap = "round";
+        inkCtx.lineJoin = "round";
+        inkCtx.stroke();
+      }
+    }
+
+    resizeInkCanvas();
+    window.addEventListener("resize", resizeInkCanvas);
+
+    inkToggle.addEventListener("click", () => {
+      inkOn = !inkOn;
+      document.body.classList.toggle("ink-on", inkOn);
+      inkToggle.classList.toggle("on", inkOn);
+    });
+
+    inkCanvas.addEventListener("pointerdown", (event) => {
+      if (!inkOn) return;
+      drawing = true;
+      currentStroke = { color: inkColor, width: inkWidth, points: [pointerPos(event)] };
+      inkCanvas.setPointerCapture(event.pointerId);
+    });
+
+    inkCanvas.addEventListener("pointermove", (event) => {
+      if (!drawing || !currentStroke) return;
+      const p = pointerPos(event);
+      currentStroke.points.push(p);
+      redrawInk();
+      inkCtx.beginPath();
+      const points = currentStroke.points;
+      inkCtx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i += 1) inkCtx.lineTo(points[i].x, points[i].y);
+      inkCtx.strokeStyle = currentStroke.color;
+      inkCtx.lineWidth = currentStroke.width;
+      inkCtx.lineCap = "round";
+      inkCtx.lineJoin = "round";
+      inkCtx.stroke();
+    });
+
+    inkCanvas.addEventListener("pointerup", (event) => {
+      if (drawing && currentStroke) strokes.push(currentStroke);
+      drawing = false;
+      currentStroke = null;
+      try { inkCanvas.releasePointerCapture(event.pointerId); } catch (_) {}
+    });
+
+    document.getElementById("undoInk").addEventListener("click", () => {
+      strokes.pop();
+      redrawInk();
+    });
+
+    document.getElementById("clearInk").addEventListener("click", () => {
+      strokes = [];
+      redrawInk();
+    });
+
+    document.querySelectorAll(".color-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".color-btn").forEach((item) => item.classList.remove("selected"));
+        button.classList.add("selected");
+        inkColor = button.dataset.color;
+      });
+    });
+
+    document.querySelectorAll(".thick-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".thick-btn").forEach((item) => item.classList.remove("selected"));
+        button.classList.add("selected");
+        inkWidth = Number(button.dataset.width);
+      });
+    });
+
+    initImageZoom();
+
+    function initImageZoom() {
+      document.querySelectorAll(".image-slide").forEach((slide) => {
+        const viewport = slide.querySelector("[data-image-viewport]");
+        const image = slide.querySelector(".image-page");
+        const value = slide.querySelector("[data-zoom-value]");
+        if (!viewport || !image || !value) return;
+
+        const state = { scale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0, baseX: 0, baseY: 0 };
+
+        function apply() {
+          image.style.transform = "translate(" + state.x + "px, " + state.y + "px) scale(" + state.scale + ")";
+          value.textContent = Math.round(state.scale * 100) + "%";
+        }
+
+        function setScale(nextScale) {
+          state.scale = Math.max(1, Math.min(4, nextScale));
+          if (state.scale === 1) {
+            state.x = 0;
+            state.y = 0;
+          }
+          apply();
+        }
+
+        slide.querySelector("[data-zoom-in]")?.addEventListener("click", () => setScale(state.scale + 0.25));
+        slide.querySelector("[data-zoom-out]")?.addEventListener("click", () => setScale(state.scale - 0.25));
+        slide.querySelector("[data-zoom-reset]")?.addEventListener("click", () => {
+          state.scale = 1;
+          state.x = 0;
+          state.y = 0;
+          apply();
+        });
+
+        viewport.addEventListener("wheel", (event) => {
+          if (!event.ctrlKey) return;
+          event.preventDefault();
+          setScale(state.scale + (event.deltaY < 0 ? 0.18 : -0.18));
+        }, { passive: false });
+
+        viewport.addEventListener("pointerdown", (event) => {
+          if (inkOn || state.scale <= 1) return;
+          state.dragging = true;
+          state.startX = event.clientX;
+          state.startY = event.clientY;
+          state.baseX = state.x;
+          state.baseY = state.y;
+          viewport.classList.add("dragging");
+          viewport.setPointerCapture(event.pointerId);
+        });
+
+        viewport.addEventListener("pointermove", (event) => {
+          if (!state.dragging) return;
+          state.x = state.baseX + event.clientX - state.startX;
+          state.y = state.baseY + event.clientY - state.startY;
+          apply();
+        });
+
+        viewport.addEventListener("pointerup", (event) => {
+          state.dragging = false;
+          viewport.classList.remove("dragging");
+          try { viewport.releasePointerCapture(event.pointerId); } catch (_) {}
+        });
+
+        apply();
+      });
+    }
+
+    initCircleAngle();
+
+    function initCircleAngle() {
+      const svg = document.getElementById("circleSvg");
+      if (!svg) return;
+      const cx = 470, cy = 350, r = 215;
+      const state = {
+        a: degToRad(145),
+        b: degToRad(35),
+        p: degToRad(265),
+        showAngles: true,
+        sameArcMode: true,
+        dragging: null
+      };
+      const byId = (id) => document.getElementById(id);
+      const els = {
+        Apoint: byId("Apoint"), Bpoint: byId("Bpoint"), Ppoint: byId("Ppoint"),
+        Alabel: byId("Alabel"), Blabel: byId("Blabel"), Plabel: byId("Plabel"),
+        OA: byId("OA"), OB: byId("OB"), PA: byId("PA"), PB: byId("PB"), AB: byId("AB"),
+        minorArc: byId("minorArc"), centerAngleArc: byId("centerAngleArc"),
+        inscribedAngleArc: byId("inscribedAngleArc"), centerAngleLabel: byId("centerAngleLabel"),
+        inscribedAngleLabel: byId("inscribedAngleLabel"), arcText: byId("arcText"),
+        centerValue: byId("centerValue"), inscribedValue: byId("inscribedValue"),
+        formula: byId("formula"), proofBox: byId("proofBox")
+      };
+
+      function degToRad(deg) { return deg * Math.PI / 180; }
+      function radToDeg(rad) { return rad * 180 / Math.PI; }
+      function norm(angle) {
+        while (angle < 0) angle += Math.PI * 2;
+        while (angle >= Math.PI * 2) angle -= Math.PI * 2;
+        return angle;
+      }
+      function pointOnCircle(angle) {
+        return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+      }
+      function setLine(line, p1, p2) {
+        line.setAttribute("x1", p1.x);
+        line.setAttribute("y1", p1.y);
+        line.setAttribute("x2", p2.x);
+        line.setAttribute("y2", p2.y);
+      }
+      function setPoint(circle, label, p, dx, dy) {
+        circle.setAttribute("cx", p.x);
+        circle.setAttribute("cy", p.y);
+        label.setAttribute("x", p.x + dx);
+        label.setAttribute("y", p.y + dy);
+      }
+      function arcPath(radius, start, end) {
+        start = norm(start);
+        end = norm(end);
+        const delta = norm(end - start);
+        const largeArc = delta > Math.PI ? 1 : 0;
+        const p1 = { x: cx + radius * Math.cos(start), y: cy + radius * Math.sin(start) };
+        const p2 = { x: cx + radius * Math.cos(end), y: cy + radius * Math.sin(end) };
+        return "M " + p1.x + " " + p1.y + " A " + radius + " " + radius + " 0 " + largeArc + " 1 " + p2.x + " " + p2.y;
+      }
+      function angleBetweenSmall(a, b) {
+        let diff = Math.abs(norm(a) - norm(b));
+        if (diff > Math.PI) diff = Math.PI * 2 - diff;
+        return diff;
+      }
+      function midAngleSmall(a, b) {
+        a = norm(a);
+        b = norm(b);
+        let diff = norm(b - a);
+        if (diff > Math.PI) diff -= Math.PI * 2;
+        return norm(a + diff / 2);
+      }
+      function pointAngleFromSvg(event) {
+        const pt = svg.createSVGPoint();
+        pt.x = event.clientX;
+        pt.y = event.clientY;
+        const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+        return Math.atan2(p.y - cy, p.x - cx);
+      }
+      function nearestOppositeArcAngle(p, a, b) {
+        p = norm(p);
+        a = norm(a);
+        b = norm(b);
+        const ab = norm(b - a);
+        const ba = norm(a - b);
+        if (ab <= Math.PI) {
+          const bp = norm(p - b);
+          if (bp >= 0 && bp <= ba) return p;
+          return norm(midAngleSmall(a, b) + Math.PI);
+        }
+        const ap = norm(p - a);
+        if (ap >= 0 && ap <= ab) return p;
+        return norm(midAngleSmall(a, b) + Math.PI);
+      }
+      function drawInscribedAngleArc(P, A, B, deg) {
+        const v1 = Math.atan2(A.y - P.y, A.x - P.x);
+        const v2 = Math.atan2(B.y - P.y, B.x - P.x);
+        let diff = norm(v2 - v1);
+        if (diff > Math.PI) diff -= Math.PI * 2;
+        const radius = 52;
+        const p1 = { x: P.x + radius * Math.cos(v1), y: P.y + radius * Math.sin(v1) };
+        const p2 = { x: P.x + radius * Math.cos(v1 + diff), y: P.y + radius * Math.sin(v1 + diff) };
+        const sweep = diff > 0 ? 1 : 0;
+        els.inscribedAngleArc.setAttribute("d", "M " + p1.x + " " + p1.y + " A " + radius + " " + radius + " 0 0 " + sweep + " " + p2.x + " " + p2.y);
+        const mid = v1 + diff / 2;
+        els.inscribedAngleLabel.setAttribute("x", P.x + 80 * Math.cos(mid) - 22);
+        els.inscribedAngleLabel.setAttribute("y", P.y + 80 * Math.sin(mid) + 8);
+        els.inscribedAngleLabel.textContent = deg + "°";
+      }
+      function update() {
+        if (state.sameArcMode) state.p = nearestOppositeArcAngle(state.p, state.a, state.b);
+        const A = pointOnCircle(state.a);
+        const B = pointOnCircle(state.b);
+        const P = pointOnCircle(state.p);
+        const O = { x: cx, y: cy };
+        setPoint(els.Apoint, els.Alabel, A, -34, -18);
+        setPoint(els.Bpoint, els.Blabel, B, 18, -18);
+        setPoint(els.Ppoint, els.Plabel, P, 18, 28);
+        setLine(els.OA, O, A);
+        setLine(els.OB, O, B);
+        setLine(els.PA, P, A);
+        setLine(els.PB, P, B);
+        setLine(els.AB, A, B);
+        const centerAngle = angleBetweenSmall(state.a, state.b);
+        const inscribedAngle = centerAngle / 2;
+        const centerDeg = Math.round(radToDeg(centerAngle));
+        const inscribedDeg = Math.round(radToDeg(inscribedAngle));
+        const start = norm(state.a);
+        const end = norm(state.b);
+        let delta = norm(end - start);
+        let arcStart = start, arcEnd = end;
+        if (delta > Math.PI) {
+          arcStart = end;
+          arcEnd = start;
+        }
+        els.minorArc.setAttribute("d", arcPath(r, arcStart, arcEnd));
+        els.centerAngleArc.setAttribute("d", arcPath(72, arcStart, arcEnd));
+        const mid = midAngleSmall(state.a, state.b);
+        els.arcText.setAttribute("x", cx + (r + 34) * Math.cos(mid) - 38);
+        els.arcText.setAttribute("y", cy + (r + 34) * Math.sin(mid));
+        els.centerAngleLabel.setAttribute("x", cx + 105 * Math.cos(mid) - 24);
+        els.centerAngleLabel.setAttribute("y", cy + 105 * Math.sin(mid) + 8);
+        els.centerAngleLabel.textContent = centerDeg + "°";
+        drawInscribedAngleArc(P, A, B, inscribedDeg);
+        [els.centerAngleArc, els.centerAngleLabel, els.inscribedAngleArc, els.inscribedAngleLabel].forEach((el) => {
+          el.style.display = state.showAngles ? "" : "none";
+        });
+        els.centerValue.textContent = centerDeg + "°";
+        els.inscribedValue.textContent = inscribedDeg + "°";
+        els.formula.textContent = centerDeg + "° = " + inscribedDeg + "° × 2";
+        els.proofBox.innerHTML = "<strong>증명 흐름</strong><br>OA = OP, OB = OP 이므로 삼각형 AOP와 BOP는 각각 이등변삼각형입니다.<br><br>따라서 밑각이 서로 같고, 중심각은 원주각을 이루는 두 조각의 외각 합으로 볼 수 있습니다.<br><br><strong>결론: ∠AOB = 2 × ∠APB</strong>";
+      }
+      ["dragA", "dragB", "dragP"].forEach((id) => {
+        document.getElementById(id).addEventListener("pointerdown", (event) => {
+          if (inkOn) return;
+          state.dragging = id.replace("drag", "").toLowerCase();
+          svg.setPointerCapture(event.pointerId);
+        });
+      });
+      svg.addEventListener("pointermove", (event) => {
+        if (!state.dragging || inkOn) return;
+        const angle = norm(pointAngleFromSvg(event));
+        if (state.dragging === "p" && state.sameArcMode) state.p = nearestOppositeArcAngle(angle, state.a, state.b);
+        else state[state.dragging] = angle;
+        update();
+      });
+      svg.addEventListener("pointerup", (event) => {
+        state.dragging = null;
+        try { svg.releasePointerCapture(event.pointerId); } catch (_) {}
+      });
+      document.getElementById("modeSameArc").addEventListener("click", () => {
+        state.sameArcMode = !state.sameArcMode;
+        document.getElementById("modeSameArc").classList.toggle("active", state.sameArcMode);
+        document.getElementById("modeSameArc").textContent = state.sameArcMode ? "같은 호 유지" : "자유 이동";
+        update();
+      });
+      document.getElementById("toggleAngles").addEventListener("click", () => {
+        state.showAngles = !state.showAngles;
+        document.getElementById("toggleAngles").textContent = state.showAngles ? "각도 표시 숨기기" : "각도 표시 보이기";
+        update();
+      });
+      document.getElementById("toggleProof").addEventListener("click", () => {
+        const box = document.getElementById("proofBox");
+        box.classList.toggle("on");
+        document.getElementById("toggleProof").classList.toggle("active", box.classList.contains("on"));
+      });
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        state.a = degToRad(145);
+        state.b = degToRad(35);
+        state.p = degToRad(265);
+        update();
+      });
+      update();
+    }
+  
+  </script>
+</body>
+</html>
