@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>삼각비와 닮음 - 직각삼각형 확대 도구</title>
+<style>
+  :root{
+    --bg:#f7f4ed;
+    --ink:#222;
+    --muted:#666;
+    --accent:#2f80ed;
+    --red:#e85050;
+    --green:#22a06b;
+    --panel:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    font-family: "Pretendard","Noto Sans KR",system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    touch-action:none;
+  }
+  .app{
+    width:100vw;
+    height:100vh;
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+  }
+  header{
+    padding:18px 28px 10px;
+    display:flex;
+    align-items:end;
+    justify-content:space-between;
+    gap:16px;
+  }
+  h1{
+    margin:0;
+    font-size:30px;
+    letter-spacing:-0.04em;
+  }
+  .subtitle{
+    font-size:18px;
+    color:var(--muted);
+    margin-top:4px;
+  }
+  .badge{
+    border:2px solid #88b9e8;
+    color:#1e76b8;
+    border-radius:18px;
+    padding:10px 16px;
+    background:#eef8ff;
+    font-weight:800;
+    font-size:18px;
+    white-space:nowrap;
+  }
+  main{
+    position:relative;
+    margin:0 24px 8px;
+    border-radius:24px;
+    background:#fffdf8;
+    box-shadow:0 8px 28px rgba(0,0,0,.08);
+    overflow:hidden;
+  }
+  svg{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  .controls{
+    margin:0 24px 18px;
+    padding:14px 18px;
+    border-radius:20px;
+    background:rgba(255,255,255,.92);
+    box-shadow:0 6px 20px rgba(0,0,0,.09);
+    display:grid;
+    grid-template-columns:1fr auto auto;
+    align-items:center;
+    gap:14px;
+  }
+  .sliderBox{
+    display:grid;
+    grid-template-columns:120px 1fr 70px;
+    gap:12px;
+    align-items:center;
+    font-size:18px;
+    font-weight:800;
+  }
+  input[type="range"]{
+    width:100%;
+    accent-color:var(--accent);
+    height:34px;
+  }
+  button{
+    border:0;
+    border-radius:14px;
+    padding:12px 16px;
+    font-weight:900;
+    font-size:16px;
+    background:#222;
+    color:white;
+    cursor:pointer;
+  }
+  button.secondary{
+    background:#e9eef5;
+    color:#1f2937;
+  }
+  .formula{
+    position:absolute;
+    left:28px;
+    top:24px;
+    background:rgba(255,255,255,.9);
+    border:2px solid #e8e2d8;
+    border-radius:18px;
+    padding:14px 18px;
+    font-size:22px;
+    font-weight:900;
+    box-shadow:0 4px 14px rgba(0,0,0,.06);
+  }
+  .formula small{
+    display:block;
+    color:var(--muted);
+    font-size:16px;
+    font-weight:700;
+    margin-top:4px;
+  }
+  .right-formula{
+    position:absolute;
+    right:28px;
+    top:118px;
+    background:rgba(255,255,255,.94);
+    border:2px solid #e8e2d8;
+    border-radius:18px;
+    padding:16px 20px;
+    font-size:24px;
+    font-weight:900;
+    line-height:1.7;
+    box-shadow:0 4px 14px rgba(0,0,0,.06);
+    min-width:280px;
+  }
+  .right-formula .title{
+    color:#1e76b8;
+    font-size:20px;
+    margin-bottom:10px;
+  }
+  .formula-row{
+    display:grid;
+    grid-template-columns:90px auto 20px auto;
+    align-items:center;
+    column-gap:12px;
+    margin:10px 0;
+    white-space:nowrap;
+  }
+  .formula-name{
+    text-align:right;
+  }
+  .equal-note{
+    font-size:18px;
+    color:#666;
+    font-weight:700;
+    margin-left:8px;
+  }
+  .frac{
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
+    vertical-align:middle;
+    line-height:1.15;
+  }
+  .frac .top{
+    border-bottom:3px solid #222;
+    padding:0 8px 5px;
+    min-width:82px;
+    text-align:center;
+  }
+  .frac .bottom{
+    padding:5px 8px 0;
+    min-width:82px;
+    text-align:center;
+  }
+  .seg{
+    display:inline-block;
+    position:relative;
+    padding-top:4px;
+    letter-spacing:.02em;
+  }
+  .seg::before{
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    top:0;
+    border-top:2.5px solid currentColor;
+  }
+  #drawCanvas{
+    position:fixed;
+    inset:0;
+    z-index:40;
+    pointer-events:none;
+    touch-action:none;
+  }
+  #drawCanvas.on{pointer-events:auto;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>삼각비는 왜 “비”일까?</h1>
+      <div class="subtitle">같은 각을 가진 직각삼각형은 커져도 닮음이므로, 변의 비가 일정하다.</div>
+    </div>
+    <div class="badge">직각삼각형에서만 정의</div>
+  </header>
+
+  <main id="stage">
+    <div class="formula" id="formula">
+      sin A = 높이 / 빗변 &nbsp;&nbsp; cos A = 밑변 / 빗변 &nbsp;&nbsp; tan A = 높이 / 밑변
+      <small id="ratioText">밑변을 늘려도 높이÷밑변 값은 그대로입니다.</small>
+    </div>
+    <div class="right-formula" id="rightFormula"></div>
+    <svg id="svg" viewBox="0 0 1200 640" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#333"></path>
+        </marker>
+      </defs>
+
+      <line id="baseLine" x1="120" y1="500" x2="1080" y2="500" stroke="#333" stroke-width="5" stroke-linecap="round"/>
+      <line id="hypLine" x1="120" y1="500" x2="1080" y2="140" stroke="#333" stroke-width="5" stroke-linecap="round"/>
+
+      <path id="angleArc" d="" fill="#f5a6a6" stroke="#b95858" stroke-width="2"/>
+      <text x="52" y="542" font-size="30" font-weight="900" fill="#333">A</text>
+
+      <g id="triangles"></g>
+      <g id="labels"></g>
+    </svg>
+  </main>
+
+  <section class="controls">
+    <div class="sliderBox">
+      <span>밑변 길이</span>
+      <input id="lengthSlider" type="range" min="1" max="8" step="1" value="1" />
+      <span id="lengthValue">3칸</span>
+    </div>
+    <button class="secondary" id="toggleRatios">비율 표시 OFF</button>
+    <button id="resetBtn">처음으로</button>
+  </section>
+</div>
+
+
+
+<script>
+(() => {
+  const svg = document.getElementById('svg');
+  const g = document.getElementById('triangles');
+  const labels = document.getElementById('labels');
+  const slider = document.getElementById('lengthSlider');
+  const lengthValue = document.getElementById('lengthValue');
+  const resetBtn = document.getElementById('resetBtn');
+  const toggleRatios = document.getElementById('toggleRatios');
+  const ratioText = document.getElementById('ratioText');
+  const angleArc = document.getElementById('angleArc');
+  const rightFormula = document.getElementById('rightFormula');
+
+  const A = {x:120, y:500};
+  const dx = 115;
+  const slope = 0.375; // height/base ratio, tan A
+  let showRatios = false;
+
+  function hypAt(x){
+    const base = x - A.x;
+    return A.y - slope * base;
+  }
+
+  function make(tag, attrs){
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for(const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+    return el;
+  }
+
+  function arcPath(cx,cy,r,startDeg,endDeg){
+    const s = Math.PI*startDeg/180, e = Math.PI*endDeg/180;
+    const x1 = cx + r*Math.cos(s), y1 = cy - r*Math.sin(s);
+    const x2 = cx + r*Math.cos(e), y2 = cy - r*Math.sin(e);
+    return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 0 ${x2} ${y2} Z`;
+  }
+
+  function render(){
+    const n = Number(slider.value);
+    lengthValue.textContent = `${n}칸`;
+    g.innerHTML = '';
+    labels.innerHTML = '';
+
+    const angle = Math.atan(slope) * 180 / Math.PI;
+    angleArc.setAttribute('d', arcPath(A.x, A.y, 54, 0, angle));
+
+    for(let i=1; i<=n; i++){
+      const x = A.x + dx*i;
+      const y = hypAt(x);
+      const h = A.y - y;
+      const color = i === n ? '#e85050' : '#2f80ed';
+      const opacity = 0.28 + i*0.055;
+
+      // vertical height
+      g.appendChild(make('line', {x1:x,y1:A.y,x2:x,y2:y,stroke:color,'stroke-width':5,'stroke-linecap':'round'}));
+
+      // right angle box
+      const box = 20;
+      g.appendChild(make('path', {
+        d:`M ${x-box} ${A.y} L ${x-box} ${A.y-box} L ${x} ${A.y-box}`,
+        fill:'none', stroke:'#777', 'stroke-width':3
+      }));
+
+      // triangle faint fill
+      g.appendChild(make('polygon', {
+        points:`${A.x},${A.y} ${x},${A.y} ${x},${y}`,
+        fill:color, opacity:opacity*0.18
+      }));
+
+      // point labels
+      const topLabels = ['B','D','F','H','J','L','N','P'];
+      const footLabels = ['C','E','G','I','K','M','O','Q'];
+      labels.appendChild(make('text', {x:x-13,y:y-18,'font-size':34,'font-weight':900,fill:'#333'})).textContent = topLabels[i-1];
+      labels.appendChild(make('text', {x:x-13,y:A.y+42,'font-size':34,'font-weight':900,fill:'#333'})).textContent = footLabels[i-1];
+
+      if(showRatios){
+        // 높이 글자는 세로선 옆에 바로 선 상태로 표시
+        labels.appendChild(make('text', {
+          x:x+10, y:y + h/2 + 6, 'font-size':18, 'font-weight':900, fill:color
+        })).textContent = `높이 ${i}`;
+
+        // 밑변 표시는 각 수직선의 발 C, E, G... 바로 아래에 표시
+        labels.appendChild(make('text', {
+          x:x-28, y:A.y+72, 'font-size':18, 'font-weight':900, fill:color
+        })).textContent = `밑변 ${i}`;
+      }
+    }
+
+    const lastX = A.x + dx*n;
+    const lastY = hypAt(lastX);
+    labels.appendChild(make('circle', {cx:lastX, cy:lastY, r:7, fill:'#e85050'}));
+
+    const tan = slope.toFixed(3);
+    ratioText.textContent = `예: 높이÷밑변 = ${tan}. 삼각형이 커져도 같은 각 A를 공유하므로 이 비율은 변하지 않습니다.`;
+
+    const topLabels = ['B','D','F','H','J','L','N','P'];
+    const footLabels = ['C','E','G','I','K','M','O','Q'];
+    const top = topLabels[n-1];
+    const foot = footLabels[n-1];
+    rightFormula.innerHTML = `
+      <div class="title">${n}칸 삼각형 기준</div>
+      <div class="formula-row">
+        <span class="formula-name">sin A =</span>
+
+        <span class="frac">
+          <span class="top"><span class="seg">${foot}${top}</span></span>
+          <span class="bottom"><span class="seg">A${top}</span></span>
+        </span>
+
+        <span>=</span>
+
+        <span class="frac">
+          <span class="top"><span class="seg">CB</span></span>
+          <span class="bottom"><span class="seg">AB</span></span>
+        </span>
+      </div>
+
+      <div class="formula-row">
+        <span class="formula-name">cos A =</span>
+
+        <span class="frac">
+          <span class="top"><span class="seg">A${foot}</span></span>
+          <span class="bottom"><span class="seg">A${top}</span></span>
+        </span>
+
+        <span>=</span>
+
+        <span class="frac">
+          <span class="top"><span class="seg">AC</span></span>
+          <span class="bottom"><span class="seg">AB</span></span>
+        </span>
+      </div>
+
+      <div class="formula-row">
+        <span class="formula-name">tan A =</span>
+
+        <span class="frac">
+          <span class="top"><span class="seg">${foot}${top}</span></span>
+          <span class="bottom"><span class="seg">A${foot}</span></span>
+        </span>
+
+        <span>=</span>
+
+        <span class="frac">
+          <span class="top"><span class="seg">CB</span></span>
+          <span class="bottom"><span class="seg">AC</span></span>
+        </span>
+      </div>
+    `;
+  }
+
+  slider.addEventListener('input', render);
+  resetBtn.addEventListener('click', () => { slider.value = 1; showRatios = false; toggleRatios.textContent='비율 표시 OFF'; render(); });
+  toggleRatios.addEventListener('click', () => {
+    showRatios = !showRatios;
+    toggleRatios.textContent = showRatios ? '비율 표시 ON' : '비율 표시 OFF';
+    render();
+  });
+
+  render();
+})();
+
+</script>
+</body>
+</html>
