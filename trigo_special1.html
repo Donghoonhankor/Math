@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>특수각 만들기: 정삼각형과 정사각형</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --ink: #111827;
+      --muted: #64748b;
+      --line: #d8dee9;
+      --blue: #2563eb;
+      --red: #dc2626;
+      --orange: #f97316;
+      --green: #16a34a;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      touch-action: manipulation;
+    }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .stage, .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .stage {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .title {
+      position: absolute;
+      top: 22px;
+      left: 26px;
+      z-index: 2;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .title p {
+      margin: 8px 0 0;
+      font-size: 16px;
+      color: var(--muted);
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .shape-line {
+      fill: rgba(37, 99, 235, 0.04);
+      stroke: var(--ink);
+      stroke-width: 5;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    .cut-line {
+      stroke: var(--red);
+      stroke-width: 5;
+      stroke-dasharray: 14 10;
+      stroke-linecap: round;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .highlight {
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      stroke-width: 6;
+      stroke-linejoin: round;
+    }
+
+    .tri-highlight {
+      fill: rgba(249, 115, 22, 0.22);
+      stroke: var(--orange);
+    }
+
+    .sq-highlight {
+      fill: rgba(22, 163, 74, 0.22);
+      stroke: var(--green);
+    }
+
+    .label, .point-label, .angle-label {
+      font-weight: 900;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 7px;
+      stroke-linejoin: round;
+    }
+
+    .label { font-size: 28px; fill: var(--ink); }
+    .point-label { font-size: 23px; fill: var(--ink); }
+
+    .hidden-point {
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .tri-cut-on .hidden-point {
+      opacity: 1;
+    }
+    .angle-label { font-size: 24px; fill: var(--blue); opacity: 0; transition: opacity 0.25s ease; }
+
+    .right-mark, .angle-arc {
+      fill: none;
+      stroke: var(--blue);
+      stroke-width: 4;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .right-mark { stroke: var(--red); }
+
+    .tri-cut-on .tri-cut-line,
+    .tri-cut-on .tri-highlight,
+    .tri-cut-on .tri-angle,
+    .tri-cut-on .tri-right-mark {
+      opacity: 1;
+    }
+
+    .sq-cut-on .sq-cut-line,
+    .sq-cut-on .sq-highlight,
+    .sq-cut-on .sq-angle,
+    .sq-cut-on .sq-right-mark {
+      opacity: 1;
+    }
+
+    .panel {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      z-index: 20;
+    }
+
+    .ratio-value {
+      visibility: hidden;
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .page2-control {
+      display: none;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.3;
+    }
+
+    .button-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 18px;
+      padding: 18px 16px;
+      font-size: 20px;
+      font-weight: 900;
+      color: white;
+      background: var(--blue);
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.22);
+      touch-action: manipulation;
+    }
+
+    button.on.tri { background: var(--orange); }
+    button.on.sq { background: var(--green); }
+
+    .small-note {
+      margin-top: auto;
+      padding: 14px;
+      border-radius: 18px;
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 16px;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+      .panel { max-height: 32vh; }
+    }
+  
+
+    /* 우측 컨트롤 박스 강제 복구 */
+    .app {
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      position: relative !important;
+      z-index: 999 !important;
+      min-width: 320px;
+      background: #ffffff !important;
+    }
+
+    .button-box {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      flex-direction: column;
+    }
+
+    #pageBtn {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    body.page-one #triBtn,
+    body.page-one #sqBtn {
+      display: block !important;
+    }
+
+    body.page-one #toggleTableBtn {
+      display: none !important;
+    }
+
+    body.page-two #triBtn,
+    body.page-two #sqBtn {
+      display: none !important;
+    }
+
+    body.page-two #toggleTableBtn {
+      display: block !important;
+    }
+  </style>
+</head>
+<body class="page-one">
+  <div class="app">
+    <section id="stage" class="stage">
+      <div class="title">
+        <h1>특수각은 도형을 반으로 자르면 나온다</h1>
+        <p>정삼각형은 30°·60°, 정사각형은 45°를 만든다.</p>
+      </div>
+
+      <svg viewBox="0 0 980 640" aria-label="정삼각형과 정사각형을 잘라 특수각을 보여주는 도구">
+        <!-- 정삼각형: 한 변 2 -->
+        <g id="triangleGroup">
+          <text class="label" x="280" y="125">정삼각형</text>
+          <polygon class="tri-highlight highlight" points="130,450 280,190 280,450" />
+          <polygon class="shape-line" points="130,450 430,450 280,190" />
+          <line class="cut-line tri-cut-line" x1="280" y1="190" x2="280" y2="450" />
+
+          <text class="point-label" x="110" y="480">B</text>
+          <text class="point-label" x="450" y="480">C</text>
+          <text class="point-label" x="280" y="160">A</text>
+          <text class="point-label hidden-point" x="280" y="482">D</text>
+
+          <path class="right-mark tri-right-mark" d="M 280 420 L 250 420 L 250 450" />
+        </g>
+
+        <!-- 정사각형: 한 변 1 -->
+        <g id="squareGroup">
+          <text class="label" x="725" y="125">정사각형</text>
+          <polygon class="sq-highlight highlight" points="610,450 840,220 840,450" />
+          <rect class="shape-line" x="610" y="220" width="230" height="230" />
+          <line class="cut-line sq-cut-line" x1="610" y1="450" x2="840" y2="220" />
+
+          <text class="point-label" x="590" y="475">B</text>
+          <text class="point-label" x="862" y="475">C</text>
+          <text class="point-label" x="862" y="200">D</text>
+          <text class="point-label" x="590" y="200">A</text>
+
+          <path class="right-mark sq-right-mark" d="M 810 450 L 810 420 L 840 420" />
+        </g>
+      </svg>
+
+      <div style="position:absolute; inset:0; background:#f7f8fb; display:none; align-items:center; justify-content:center; z-index:5;" id="page2">
+        <div style="width:100%; height:100%; padding:32px 40px; display:flex; flex-direction:column; gap:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:28px; flex:1;">
+            
+            <div style="flex:1; background:white; border:1px solid #d8dee9; border-radius:24px; padding:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+              <h2 style="margin:0 0 18px; font-size:28px;">30°-60°-90° 삼각형</h2>
+              <svg viewBox="0 0 320 260" style="width:100%; max-width:320px; height:auto;">
+                <polygon points="105,230 215,230 105,40" fill="rgba(249,115,22,0.15)" stroke="#f97316" stroke-width="5" />
+                <path d="M 105 200 L 135 200 L 135 230" fill="none" stroke="#dc2626" stroke-width="4" />
+                <text x="69" y="135" font-size="24" font-weight="900">√3</text>
+                <text x="160" y="252" font-size="24" font-weight="900">1</text>
+                <text x="173" y="118" font-size="24" font-weight="900">2</text>
+              </svg>
+              <div style="font-size:34px; font-weight:900; margin-top:8px;">1 : √3 : 2</div>
+            </div>
+
+            <div style="flex:1; background:white; border:1px solid #d8dee9; border-radius:24px; padding:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+              <h2 style="margin:0 0 18px; font-size:28px;">45°-45°-90° 삼각형</h2>
+              <svg viewBox="0 0 320 260" style="width:100%; max-width:320px; height:auto;">
+                <polygon points="40,220 220,220 220,40" fill="rgba(22,163,74,0.15)" stroke="#16a34a" stroke-width="5" />
+                <path d="M 190 220 L 190 190 L 220 190" fill="none" stroke="#dc2626" stroke-width="4" />
+                <text x="160" y="242" font-size="24" font-weight="900">1</text>
+                <text x="242" y="130" font-size="24" font-weight="900">1</text>
+                <text x="130" y="95" font-size="24" font-weight="900">√2</text>
+              </svg>
+              <div style="font-size:34px; font-weight:900; margin-top:8px;">1 : 1 : √2</div>
+            </div>
+          </div>
+
+          <div style="background:white; border:1px solid #d8dee9; border-radius:24px; padding:14px 18px; box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+            <h2 style="margin:0 0 10px; font-size:26px;">특수각 삼각비 표</h2>
+            <table style="width:100%; border-collapse:collapse; text-align:center; font-size:21px; font-weight:800; overflow:hidden; border-radius:18px;">
+              <tr style="background:#2563eb; color:white;">
+                <th style="padding:8px; border:2px solid #cbd5e1;"></th>
+                <th style="padding:8px; border:2px solid #cbd5e1;">30°</th>
+                <th style="padding:8px; border:2px solid #cbd5e1;">45°</th>
+                <th style="padding:8px; border:2px solid #cbd5e1;">60°</th>
+              </tr>
+              <tr>
+                <td style="padding:8px; border:2px solid #cbd5e1; background:#eff6ff;">sin</td>
+                <td style="padding:8px; border:2px solid #cbd5e1;"><span class="ratio-value"><span style="display:inline-flex; flex-direction:column; align-items:center;"><span style="border-bottom:2px solid currentColor; padding:0 5px 1px;">1</span><span style="padding-top:1px;">2</span></span></span></td>
+                <td style="padding:8px; border:2px solid #cbd5e1;"><span class="ratio-value"><span style="display:inline-flex; flex-direction:column; align-items:center;"><span style="border-bottom:2px solid currentColor; padding:0 5px 1px;">√2</span><span style="padding-top:1px;">2</span></span></span></td>
+                <td style="padding:8px; border:2px solid #cbd5e1;"><span class="ratio-value"><span style="display:inline-flex; flex-direction:column; align-items:center;"><span style="border-bottom:2px solid currentColor; padding:0 5px 1px;">√3</span><span style="padding-top:1px;">2</span></span></span></td>
+              </tr>
+              <tr>
+                <td style="padding:8px; border:2px solid #cbd5e1; background:#eff6ff;">cos</td>
+                <td style="padding:8px; border:2px solid #cbd5e1;"><span class="ratio-value"><span style="display:inline-flex; flex-direction:column; align-items:center;"><span style="border-bottom:2px solid currentColor; padding:0 5px 1px;">√3</span><span style="padding-top:1px;">2</span></span></span></td>
+                <td style="padding:8px; border:2px solid #cbd5e1;"><span class="ratio-value"><span style="display:inline-flex; flex-direction:column; align-items:center;"><span style="border-bottom:2px solid currentColor; padding:0 5px 1px;">√2</span><span style="padding-top:1px;">2</span></span></span></td>
+                <td style="padding:8px; border:2px solid #cbd5e1;"><span class="ratio-value"><span style="display:inline-flex; flex-direction:column; align-items:center;"><span style="border-bottom:2px solid currentColor; padding:0 5px 1px;">1</span><span style="padding-top:1px;">2</span></span></span></td>
+              </tr>
+              <tr>
+                <td style="padding:8px; border:2px solid #cbd5e1; background:#eff6ff;">tan</td>
+                <td style="padding:8px; border:2px solid #cbd5e1;"><span class="ratio-value"><span style="display:inline-flex; flex-direction:column; align-items:center;"><span style="border-bottom:2px solid currentColor; padding:0 5px 1px;">√3</span><span style="padding-top:1px;">3</span></span></span></td>
+                <td style="padding:8px; border:2px solid #cbd5e1;"><span class="ratio-value">1</span></td>
+                <td style="padding:8px; border:2px solid #cbd5e1;"><span class="ratio-value">√3</span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h2>도형 자르기</h2>
+      <div class="button-box">
+        <button id="triBtn" class="tri page1-control">정삼각형 반 자르기</button>
+        <button id="sqBtn" class="sq page1-control">정사각형 반 자르기</button>
+        <button id="toggleTableBtn" class="page2-control">값 보기</button>
+        <button id="pageBtn">2페이지 보기</button>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const stage = document.getElementById('stage');
+    const triBtn = document.getElementById('triBtn');
+    const sqBtn = document.getElementById('sqBtn');
+    const pageBtn = document.getElementById('pageBtn');
+    const page2 = document.getElementById('page2');
+    const toggleTableBtn = document.getElementById('toggleTableBtn');
+
+    triBtn.addEventListener('click', () => {
+      stage.classList.toggle('tri-cut-on');
+      triBtn.classList.toggle('on');
+    });
+
+    sqBtn.addEventListener('click', () => {
+      stage.classList.toggle('sq-cut-on');
+      sqBtn.classList.toggle('on');
+    });
+
+    let showingPage2 = false;
+
+    let tableVisible = false;
+
+    toggleTableBtn.addEventListener('click', () => {
+      tableVisible = !tableVisible;
+
+      document.querySelectorAll('.ratio-value').forEach(el => {
+        el.style.visibility = tableVisible ? 'visible' : 'hidden';
+      });
+
+      toggleTableBtn.textContent = tableVisible ? '값 숨기기' : '값 보기';
+    });
+
+    pageBtn.addEventListener('click', () => {
+      showingPage2 = !showingPage2;
+
+      if (showingPage2) {
+        page2.style.display = 'flex';
+        pageBtn.textContent = '1페이지 보기';
+        document.body.classList.remove('page-one');
+        document.body.classList.add('page-two');
+      } else {
+        page2.style.display = 'none';
+        pageBtn.textContent = '2페이지 보기';
+        document.body.classList.remove('page-two');
+        document.body.classList.add('page-one');
+      }
+    });
+  </script>
+</body>
+</html>
