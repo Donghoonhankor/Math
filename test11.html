@@ -1,0 +1,2372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>원주각과 중심각</title>
+  <style>
+    :root {
+      --accent: #2563eb;
+      --accent2: #dc2626;
+      --ink: #111827;
+      --line: #d6dbe5;
+      --paper: #ffffff;
+      --bg: #f4f6f9;
+      --text: #172033;
+      --muted: #667085;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .deck {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      position: relative;
+      background: var(--paper);
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      padding: 72px 76px 86px;
+      background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+      overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    .slide-title {
+      font-size: 54px;
+      line-height: 1.12;
+      margin: 0;
+      letter-spacing: 0;
+      font-weight: 900;
+    }
+
+    .slide-subtitle {
+      margin: 20px 0 0;
+      max-width: 980px;
+      font-size: 28px;
+      line-height: 1.42;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .title-slide {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .title-inner {
+      max-width: 1120px;
+    }
+
+    .badges {
+      margin-top: 36px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 18px;
+      font-weight: 800;
+      background: #fff;
+    }
+
+    .content-slide {
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .content-list {
+      margin: 34px 0 0;
+      padding: 0;
+      max-width: 1120px;
+      list-style: none;
+      display: grid;
+      gap: 22px;
+    }
+
+    .content-list li {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 18px;
+      align-items: start;
+      font-size: 31px;
+      line-height: 1.42;
+      font-weight: 700;
+    }
+
+    .content-list li::before {
+      content: "";
+      width: 20px;
+      height: 20px;
+      margin-top: 13px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 9px rgba(37, 99, 235, 0.12);
+    }
+
+    .callout {
+      width: fit-content;
+      margin-top: 42px;
+      padding: 20px 28px;
+      border-left: 9px solid var(--accent2);
+      background: #fff;
+      font-size: 34px;
+      font-weight: 900;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .interactive-slide {
+      padding: 0;
+      background: #f5f7fb;
+    }
+
+    .image-slide {
+      padding: 0;
+      background: #111827;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .image-viewport {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+    }
+
+    .image-viewport.dragging {
+      cursor: grabbing;
+    }
+
+    .image-slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #f8fafc;
+      transform-origin: center center;
+      will-change: transform;
+    }
+
+    .image-caption {
+      position: absolute;
+      left: 24px;
+      top: 18px;
+      max-width: calc(100% - 48px);
+      padding: 9px 13px;
+      border-radius: 8px;
+      background: rgba(17, 24, 39, 0.78);
+      color: #fff;
+      font-weight: 850;
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .image-zoom-controls {
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      z-index: 8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(17, 24, 39, 0.78);
+      color: #fff;
+      backdrop-filter: blur(8px);
+    }
+
+    .image-zoom-controls button {
+      width: 38px;
+      height: 34px;
+      padding: 0;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+      box-shadow: none;
+    }
+
+    .image-zoom-value {
+      min-width: 56px;
+      text-align: center;
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .pdf-slide {
+      padding: 0;
+      background: #2f3540;
+      flex-direction: column;
+    }
+
+    .pdf-toolbar {
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      z-index: 12;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(17, 24, 39, 0.78);
+      color: #fff;
+      backdrop-filter: blur(8px);
+    }
+
+    .pdf-toolbar button {
+      min-width: 38px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+      box-shadow: none;
+      font-size: 14px;
+    }
+
+    .pdf-page-value,
+    .pdf-zoom-value {
+      min-width: 60px;
+      text-align: center;
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .pdf-canvas-wrap {
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 58px 28px 78px;
+    }
+
+    .pdf-canvas-wrap.zoomed {
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+
+    .pdf-canvas {
+      display: block;
+      background: #fff;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
+    }
+
+    .pdf-loading {
+      color: #fff;
+      font-size: 20px;
+      font-weight: 850;
+    }
+
+    .tool-slide {
+      padding: 0;
+      background: #fff;
+      overflow: hidden;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+
+    .tool-stage {
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background: #fff;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    .tool-canvas {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-width: 100%;
+      min-height: 100%;
+    }
+
+    .tool-frame {
+      width: 1366px;
+      height: 768px;
+      border: 0;
+      background: #fff;
+      display: block;
+      transform-origin: top left;
+    }
+
+    .interactive-layout {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+    }
+
+    .stage-wrap {
+      position: relative;
+      min-width: 0;
+      background: radial-gradient(circle at center, #ffffff 0%, #eef2f7 100%);
+      border-right: 1px solid var(--line);
+    }
+
+    .stage-wrap svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .panel {
+      padding: 28px 24px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.22;
+      letter-spacing: 0;
+    }
+
+    .panel p {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .readout {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: #fbfcfe;
+    }
+
+    .angle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--line);
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .angle-row:last-child {
+      border-bottom: 0;
+    }
+
+    .center-label { color: var(--accent); }
+    .inscribed-label { color: var(--accent2); }
+
+    .angle-value {
+      font-size: 25px;
+      font-weight: 950;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .formula {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      text-align: center;
+      font-size: 25px;
+      font-weight: 950;
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-weight: 850;
+      cursor: pointer;
+      background: var(--ink);
+      color: white;
+    }
+
+    button.secondary {
+      background: #e9edf5;
+      color: var(--text);
+    }
+
+    button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .proof-box {
+      display: none;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 15px;
+      background: #fff;
+      font-size: 15px;
+      line-height: 1.55;
+      color: #334155;
+      overflow: auto;
+    }
+
+    .proof-box.on {
+      display: block;
+    }
+
+    .point {
+      cursor: grab;
+    }
+
+    .point:active {
+      cursor: grabbing;
+    }
+
+    .point-label,
+    .math-label,
+    .arc-label {
+      font-weight: 950;
+      paint-order: stroke;
+      stroke: white;
+      stroke-linejoin: round;
+    }
+
+    .point-label {
+      font-size: 22px;
+      fill: var(--text);
+      stroke-width: 5px;
+    }
+
+    .math-label {
+      font-size: 22px;
+      stroke-width: 5px;
+    }
+
+    .arc-label {
+      font-size: 18px;
+      fill: #475467;
+      stroke-width: 4px;
+    }
+
+    .toolbar {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 10px 32px rgba(15, 23, 42, 0.18);
+      backdrop-filter: blur(8px);
+      max-width: min(560px, calc(100vw - 36px));
+    }
+
+    .toolbar.dragging {
+      cursor: grabbing;
+    }
+
+    body.tool-active .toolbar:not(.toolbar-positioned) {
+      top: 18px;
+      left: 18px;
+      right: auto;
+      bottom: auto;
+      justify-content: flex-start;
+    }
+
+    .toolbar-drag-handle {
+      min-width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: #dbe3ef;
+      color: #111827;
+      font-size: 18px;
+      font-weight: 950;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .toolbar-drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .toolbar button {
+      min-width: 46px;
+      height: 44px;
+      padding: 0 13px;
+      border-radius: 8px;
+      font-size: 15px;
+      background: #111827;
+      color: #fff;
+    }
+
+    .toolbar button.toolbar-drag-handle {
+      min-width: 44px;
+      padding: 0;
+      background: #dbe3ef;
+      color: #111827;
+      cursor: grab;
+    }
+
+    .toolbar button.tool {
+      background: #edf1f7;
+      color: #111827;
+    }
+
+    .toolbar button.on {
+      background: #f59e0b;
+      color: #111827;
+    }
+
+    .slide-count {
+      min-width: 76px;
+      text-align: center;
+      font-weight: 900;
+      color: #334155;
+      font-size: 15px;
+    }
+
+    .palette {
+      display: flex;
+      gap: 6px;
+      padding-left: 4px;
+      border-left: 1px solid var(--line);
+    }
+
+    .thickness {
+      display: flex;
+      gap: 6px;
+      padding-left: 4px;
+      border-left: 1px solid var(--line);
+    }
+
+    .thick-btn.selected {
+      background: #111827;
+      color: #fff;
+    }
+
+    .color-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      padding: 0;
+      border: 3px solid white;
+      outline: 1px solid #94a3b8;
+      box-shadow: none;
+      min-width: 0;
+    }
+
+    .color-btn.selected {
+      outline: 3px solid #111827;
+    }
+
+    #inkCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 40;
+      pointer-events: none;
+      touch-action: none;
+    }
+
+    .ink-on #inkCanvas {
+      pointer-events: auto;
+    }
+
+    @media (max-width: 980px) {
+      .slide {
+        padding: 56px 30px 86px;
+      }
+
+      .slide-title {
+        font-size: 40px;
+      }
+
+      .slide-subtitle,
+      .content-list li {
+        font-size: 23px;
+      }
+
+      .interactive-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+      }
+
+      .panel {
+        max-height: 34vh;
+        overflow: auto;
+        border-top: 1px solid var(--line);
+      }
+    }
+
+    @media print {
+      body {
+        overflow: visible;
+      }
+
+      .deck {
+        height: auto;
+      }
+
+      .slide {
+        position: relative;
+        display: flex !important;
+        page-break-after: always;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .toolbar,
+      #inkCanvas {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" id="deck">
+    <section class="slide title-slide active" data-slide="0">
+      <div class="title-inner">
+        <h1 class="slide-title">원주각과 중심각</h1>
+        <p class="slide-subtitle">같은 호를 보는 중심각과 원주각의 관계를 움직이며 확인한다.</p>
+        
+      </div>
+    </section>
+    <section class="slide content-slide" data-slide="1">
+      <h1 class="slide-title">오늘의 관찰</h1>
+      <ul class="content-list"><li>원 위의 두 점 A, B가 정해져 있을 때, 호 AB를 보는 점 P의 위치를 바꾸어 본다.</li><li>중심각 ∠AOB와 원주각 ∠APB의 크기를 비교한다.</li><li>같은 호를 보면 중심각은 원주각의 2배가 되는지 확인한다.</li></ul>
+      <div class="callout">예상: ∠AOB = 2 × ∠APB</div>
+    </section>
+    <section class="slide interactive-slide" data-slide="2">
+      <div class="interactive-layout">
+        <div class="stage-wrap">
+          <svg id="circleSvg" viewBox="0 0 1100 780" aria-label="원주각과 중심각 시뮬레이터">
+            <circle cx="470" cy="350" r="215" fill="white" stroke="#111827" stroke-width="5" />
+            <path id="minorArc" fill="none" stroke="#f59e0b" stroke-width="10" stroke-linecap="round" opacity="0.82" />
+            <line id="OA" stroke="#2563eb" stroke-width="5" stroke-linecap="round" />
+            <line id="OB" stroke="#2563eb" stroke-width="5" stroke-linecap="round" />
+            <line id="PA" stroke="#dc2626" stroke-width="5" stroke-linecap="round" />
+            <line id="PB" stroke="#dc2626" stroke-width="5" stroke-linecap="round" />
+            <line id="AB" stroke="#475467" stroke-width="3" stroke-dasharray="8 8" opacity="0.72" />
+            <path id="centerAngleArc" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round" />
+            <path id="inscribedAngleArc" fill="none" stroke="#dc2626" stroke-width="5" stroke-linecap="round" />
+            <text id="centerAngleLabel" class="math-label" fill="#2563eb"></text>
+            <text id="inscribedAngleLabel" class="math-label" fill="#dc2626"></text>
+            <text id="arcText" class="arc-label">호 AB</text>
+            <circle cx="470" cy="350" r="7" fill="#111827" />
+            <text x="485" y="343" class="point-label">O</text>
+            <g id="dragA" class="point">
+              <circle id="Apoint" r="15" fill="#f59e0b" stroke="white" stroke-width="4" />
+              <text id="Alabel" class="point-label">A</text>
+            </g>
+            <g id="dragB" class="point">
+              <circle id="Bpoint" r="15" fill="#f59e0b" stroke="white" stroke-width="4" />
+              <text id="Blabel" class="point-label">B</text>
+            </g>
+            <g id="dragP" class="point">
+              <circle id="Ppoint" r="15" fill="#dc2626" stroke="white" stroke-width="4" />
+              <text id="Plabel" class="point-label">P</text>
+            </g>
+          </svg>
+        </div>
+        <aside class="panel">
+          <div>
+            <h2>직접 움직여 보기</h2>
+            <p>A, B, P를 드래그하고 각도 값을 비교한다.</p>
+          </div>
+          <div class="readout">
+            <div class="angle-row">
+              <span class="center-label">중심각 ∠AOB</span>
+              <span id="centerValue" class="angle-value">0°</span>
+            </div>
+            <div class="angle-row">
+              <span class="inscribed-label">원주각 ∠APB</span>
+              <span id="inscribedValue" class="angle-value">0°</span>
+            </div>
+            <div class="formula" id="formula">중심각 = 원주각 × 2</div>
+          </div>
+          <div class="controls">
+            <button id="modeSameArc" class="active">같은 호 유지</button>
+            <button id="toggleAngles" class="secondary">각도 표시 숨기기</button>
+            <button id="toggleProof" class="secondary">증명 보기</button>
+            <button id="resetBtn" class="secondary">처음 위치</button>
+          </div>
+          <div class="proof-box" id="proofBox"></div>
+        </aside>
+      </div>
+    </section>
+    <section class="slide content-slide" data-slide="3">
+      <h1 class="slide-title">정리</h1>
+      <ul class="content-list"><li>한 원에서 같은 호를 보는 중심각의 크기는 원주각의 크기의 2배이다.</li><li>반대로 원주각은 같은 호를 보는 중심각의 절반이다.</li><li>점 P가 같은 호의 반대쪽 원 위에서 움직여도 원주각의 크기는 일정하다.</li></ul>
+      <div class="callout">∠AOB = 2 × ∠APB</div>
+    </section>
+    <section class="slide tool-slide" data-slide="4">
+      <div class="tool-stage" data-tool-stage>
+        <div class="tool-canvas" data-tool-canvas>
+          <iframe class="tool-frame" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot; /&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no&quot; /&gt;
+  &lt;title&gt;특수각 만들기: 정삼각형과 정사각형&lt;/title&gt;
+  &lt;style&gt;
+    :root {
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --ink: #111827;
+      --muted: #64748b;
+      --line: #d8dee9;
+      --blue: #2563eb;
+      --red: #dc2626;
+      --orange: #f97316;
+      --green: #16a34a;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;
+      touch-action: manipulation;
+    }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .stage, .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .stage {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .title {
+      position: absolute;
+      top: 22px;
+      left: 26px;
+      z-index: 2;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .title p {
+      margin: 8px 0 0;
+      font-size: 16px;
+      color: var(--muted);
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .shape-line {
+      fill: rgba(37, 99, 235, 0.04);
+      stroke: var(--ink);
+      stroke-width: 5;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    .cut-line {
+      stroke: var(--red);
+      stroke-width: 5;
+      stroke-dasharray: 14 10;
+      stroke-linecap: round;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .highlight {
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      stroke-width: 6;
+      stroke-linejoin: round;
+    }
+
+    .tri-highlight {
+      fill: rgba(249, 115, 22, 0.22);
+      stroke: var(--orange);
+    }
+
+    .sq-highlight {
+      fill: rgba(22, 163, 74, 0.22);
+      stroke: var(--green);
+    }
+
+    .label, .point-label, .angle-label {
+      font-weight: 900;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 7px;
+      stroke-linejoin: round;
+    }
+
+    .label { font-size: 28px; fill: var(--ink); }
+    .point-label { font-size: 23px; fill: var(--ink); }
+
+    .hidden-point {
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .tri-cut-on .hidden-point {
+      opacity: 1;
+    }
+    .angle-label { font-size: 24px; fill: var(--blue); opacity: 0; transition: opacity 0.25s ease; }
+
+    .right-mark, .angle-arc {
+      fill: none;
+      stroke: var(--blue);
+      stroke-width: 4;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .right-mark { stroke: var(--red); }
+
+    .tri-cut-on .tri-cut-line,
+    .tri-cut-on .tri-highlight,
+    .tri-cut-on .tri-angle,
+    .tri-cut-on .tri-right-mark {
+      opacity: 1;
+    }
+
+    .sq-cut-on .sq-cut-line,
+    .sq-cut-on .sq-highlight,
+    .sq-cut-on .sq-angle,
+    .sq-cut-on .sq-right-mark {
+      opacity: 1;
+    }
+
+    .panel {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      z-index: 20;
+    }
+
+    .ratio-value {
+      visibility: hidden;
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .page2-control {
+      display: none;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.3;
+    }
+
+    .button-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 18px;
+      padding: 18px 16px;
+      font-size: 20px;
+      font-weight: 900;
+      color: white;
+      background: var(--blue);
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.22);
+      touch-action: manipulation;
+    }
+
+    button.on.tri { background: var(--orange); }
+    button.on.sq { background: var(--green); }
+
+    .small-note {
+      margin-top: auto;
+      padding: 14px;
+      border-radius: 18px;
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 16px;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+      .panel { max-height: 32vh; }
+    }
+  
+
+    /* 우측 컨트롤 박스 강제 복구 */
+    .app {
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      position: relative !important;
+      z-index: 999 !important;
+      min-width: 320px;
+      background: #ffffff !important;
+    }
+
+    .button-box {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      flex-direction: column;
+    }
+
+    #pageBtn {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    body.page-one #triBtn,
+    body.page-one #sqBtn {
+      display: block !important;
+    }
+
+    body.page-one #toggleTableBtn {
+      display: none !important;
+    }
+
+    body.page-two #triBtn,
+    body.page-two #sqBtn {
+      display: none !important;
+    }
+
+    body.page-two #toggleTableBtn {
+      display: block !important;
+    }
+  &lt;/style&gt;
+&lt;style id=&quot;html-lesson-tool-fit&quot;&gt;
+html, body {
+  min-width: 100% !important;
+  min-height: 100% !important;
+  height: auto !important;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+body {
+  touch-action: manipulation !important;
+}
+.app {
+  min-height: 100vh !important;
+  height: auto !important;
+}
+.stage {
+  overflow: auto !important;
+}
+#page2 {
+  overflow: auto !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+#page2 &gt; div {
+  height: auto !important;
+  min-height: 100% !important;
+}
+@media (max-height: 720px) {
+  .app {
+    gap: 10px !important;
+    padding: 10px !important;
+  }
+  .panel {
+    padding: 12px !important;
+    gap: 10px !important;
+    overflow: auto !important;
+  }
+  button {
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+  #page2 &gt; div {
+    padding: 16px !important;
+    gap: 14px !important;
+  }
+}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body class=&quot;page-one&quot;&gt;
+  &lt;div class=&quot;app&quot;&gt;
+    &lt;section id=&quot;stage&quot; class=&quot;stage&quot;&gt;
+      &lt;div class=&quot;title&quot;&gt;
+        &lt;h1&gt;특수각은 도형을 반으로 자르면 나온다&lt;/h1&gt;
+        &lt;p&gt;정삼각형은 30°·60°, 정사각형은 45°를 만든다.&lt;/p&gt;
+      &lt;/div&gt;
+
+      &lt;svg viewBox=&quot;0 0 980 640&quot; aria-label=&quot;정삼각형과 정사각형을 잘라 특수각을 보여주는 도구&quot;&gt;
+        &lt;!-- 정삼각형: 한 변 2 --&gt;
+        &lt;g id=&quot;triangleGroup&quot;&gt;
+          &lt;text class=&quot;label&quot; x=&quot;280&quot; y=&quot;125&quot;&gt;정삼각형&lt;/text&gt;
+          &lt;polygon class=&quot;tri-highlight highlight&quot; points=&quot;130,450 280,190 280,450&quot; /&gt;
+          &lt;polygon class=&quot;shape-line&quot; points=&quot;130,450 430,450 280,190&quot; /&gt;
+          &lt;line class=&quot;cut-line tri-cut-line&quot; x1=&quot;280&quot; y1=&quot;190&quot; x2=&quot;280&quot; y2=&quot;450&quot; /&gt;
+
+          &lt;text class=&quot;point-label&quot; x=&quot;110&quot; y=&quot;480&quot;&gt;B&lt;/text&gt;
+          &lt;text class=&quot;point-label&quot; x=&quot;450&quot; y=&quot;480&quot;&gt;C&lt;/text&gt;
+          &lt;text class=&quot;point-label&quot; x=&quot;280&quot; y=&quot;160&quot;&gt;A&lt;/text&gt;
+          &lt;text class=&quot;point-label hidden-point&quot; x=&quot;280&quot; y=&quot;482&quot;&gt;D&lt;/text&gt;
+
+          &lt;path class=&quot;right-mark tri-right-mark&quot; d=&quot;M 280 420 L 250 420 L 250 450&quot; /&gt;
+        &lt;/g&gt;
+
+        &lt;!-- 정사각형: 한 변 1 --&gt;
+        &lt;g id=&quot;squareGroup&quot;&gt;
+          &lt;text class=&quot;label&quot; x=&quot;725&quot; y=&quot;125&quot;&gt;정사각형&lt;/text&gt;
+          &lt;polygon class=&quot;sq-highlight highlight&quot; points=&quot;610,450 840,220 840,450&quot; /&gt;
+          &lt;rect class=&quot;shape-line&quot; x=&quot;610&quot; y=&quot;220&quot; width=&quot;230&quot; height=&quot;230&quot; /&gt;
+          &lt;line class=&quot;cut-line sq-cut-line&quot; x1=&quot;610&quot; y1=&quot;450&quot; x2=&quot;840&quot; y2=&quot;220&quot; /&gt;
+
+          &lt;text class=&quot;point-label&quot; x=&quot;590&quot; y=&quot;475&quot;&gt;B&lt;/text&gt;
+          &lt;text class=&quot;point-label&quot; x=&quot;862&quot; y=&quot;475&quot;&gt;C&lt;/text&gt;
+          &lt;text class=&quot;point-label&quot; x=&quot;862&quot; y=&quot;200&quot;&gt;D&lt;/text&gt;
+          &lt;text class=&quot;point-label&quot; x=&quot;590&quot; y=&quot;200&quot;&gt;A&lt;/text&gt;
+
+          &lt;path class=&quot;right-mark sq-right-mark&quot; d=&quot;M 810 450 L 810 420 L 840 420&quot; /&gt;
+        &lt;/g&gt;
+      &lt;/svg&gt;
+
+      &lt;div style=&quot;position:absolute; inset:0; background:#f7f8fb; display:none; align-items:center; justify-content:center; z-index:5;&quot; id=&quot;page2&quot;&gt;
+        &lt;div style=&quot;width:100%; height:100%; padding:32px 40px; display:flex; flex-direction:column; gap:24px;&quot;&gt;
+          &lt;div style=&quot;display:flex; justify-content:space-between; align-items:flex-start; gap:28px; flex:1;&quot;&gt;
+            
+            &lt;div style=&quot;flex:1; background:white; border:1px solid #d8dee9; border-radius:24px; padding:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(15,23,42,0.08);&quot;&gt;
+              &lt;h2 style=&quot;margin:0 0 18px; font-size:28px;&quot;&gt;30°-60°-90° 삼각형&lt;/h2&gt;
+              &lt;svg viewBox=&quot;0 0 320 260&quot; style=&quot;width:100%; max-width:320px; height:auto;&quot;&gt;
+                &lt;polygon points=&quot;105,230 215,230 105,40&quot; fill=&quot;rgba(249,115,22,0.15)&quot; stroke=&quot;#f97316&quot; stroke-width=&quot;5&quot; /&gt;
+                &lt;path d=&quot;M 105 200 L 135 200 L 135 230&quot; fill=&quot;none&quot; stroke=&quot;#dc2626&quot; stroke-width=&quot;4&quot; /&gt;
+                &lt;text x=&quot;69&quot; y=&quot;135&quot; font-size=&quot;24&quot; font-weight=&quot;900&quot;&gt;√3&lt;/text&gt;
+                &lt;text x=&quot;160&quot; y=&quot;252&quot; font-size=&quot;24&quot; font-weight=&quot;900&quot;&gt;1&lt;/text&gt;
+                &lt;text x=&quot;173&quot; y=&quot;118&quot; font-size=&quot;24&quot; font-weight=&quot;900&quot;&gt;2&lt;/text&gt;
+              &lt;/svg&gt;
+              &lt;div style=&quot;font-size:34px; font-weight:900; margin-top:8px;&quot;&gt;1 : √3 : 2&lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;div style=&quot;flex:1; background:white; border:1px solid #d8dee9; border-radius:24px; padding:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(15,23,42,0.08);&quot;&gt;
+              &lt;h2 style=&quot;margin:0 0 18px; font-size:28px;&quot;&gt;45°-45°-90° 삼각형&lt;/h2&gt;
+              &lt;svg viewBox=&quot;0 0 320 260&quot; style=&quot;width:100%; max-width:320px; height:auto;&quot;&gt;
+                &lt;polygon points=&quot;40,220 220,220 220,40&quot; fill=&quot;rgba(22,163,74,0.15)&quot; stroke=&quot;#16a34a&quot; stroke-width=&quot;5&quot; /&gt;
+                &lt;path d=&quot;M 190 220 L 190 190 L 220 190&quot; fill=&quot;none&quot; stroke=&quot;#dc2626&quot; stroke-width=&quot;4&quot; /&gt;
+                &lt;text x=&quot;160&quot; y=&quot;242&quot; font-size=&quot;24&quot; font-weight=&quot;900&quot;&gt;1&lt;/text&gt;
+                &lt;text x=&quot;242&quot; y=&quot;130&quot; font-size=&quot;24&quot; font-weight=&quot;900&quot;&gt;1&lt;/text&gt;
+                &lt;text x=&quot;130&quot; y=&quot;95&quot; font-size=&quot;24&quot; font-weight=&quot;900&quot;&gt;√2&lt;/text&gt;
+              &lt;/svg&gt;
+              &lt;div style=&quot;font-size:34px; font-weight:900; margin-top:8px;&quot;&gt;1 : 1 : √2&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+
+          &lt;div style=&quot;background:white; border:1px solid #d8dee9; border-radius:24px; padding:14px 18px; box-shadow:0 10px 30px rgba(15,23,42,0.08);&quot;&gt;
+            &lt;h2 style=&quot;margin:0 0 10px; font-size:26px;&quot;&gt;특수각 삼각비 표&lt;/h2&gt;
+            &lt;table style=&quot;width:100%; border-collapse:collapse; text-align:center; font-size:21px; font-weight:800; overflow:hidden; border-radius:18px;&quot;&gt;
+              &lt;tr style=&quot;background:#2563eb; color:white;&quot;&gt;
+                &lt;th style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;&lt;/th&gt;
+                &lt;th style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;30°&lt;/th&gt;
+                &lt;th style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;45°&lt;/th&gt;
+                &lt;th style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;60°&lt;/th&gt;
+              &lt;/tr&gt;
+              &lt;tr&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1; background:#eff6ff;&quot;&gt;sin&lt;/td&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;&lt;span class=&quot;ratio-value&quot;&gt;&lt;span style=&quot;display:inline-flex; flex-direction:column; align-items:center;&quot;&gt;&lt;span style=&quot;border-bottom:2px solid currentColor; padding:0 5px 1px;&quot;&gt;1&lt;/span&gt;&lt;span style=&quot;padding-top:1px;&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;&lt;span class=&quot;ratio-value&quot;&gt;&lt;span style=&quot;display:inline-flex; flex-direction:column; align-items:center;&quot;&gt;&lt;span style=&quot;border-bottom:2px solid currentColor; padding:0 5px 1px;&quot;&gt;√2&lt;/span&gt;&lt;span style=&quot;padding-top:1px;&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;&lt;span class=&quot;ratio-value&quot;&gt;&lt;span style=&quot;display:inline-flex; flex-direction:column; align-items:center;&quot;&gt;&lt;span style=&quot;border-bottom:2px solid currentColor; padding:0 5px 1px;&quot;&gt;√3&lt;/span&gt;&lt;span style=&quot;padding-top:1px;&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;
+              &lt;/tr&gt;
+              &lt;tr&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1; background:#eff6ff;&quot;&gt;cos&lt;/td&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;&lt;span class=&quot;ratio-value&quot;&gt;&lt;span style=&quot;display:inline-flex; flex-direction:column; align-items:center;&quot;&gt;&lt;span style=&quot;border-bottom:2px solid currentColor; padding:0 5px 1px;&quot;&gt;√3&lt;/span&gt;&lt;span style=&quot;padding-top:1px;&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;&lt;span class=&quot;ratio-value&quot;&gt;&lt;span style=&quot;display:inline-flex; flex-direction:column; align-items:center;&quot;&gt;&lt;span style=&quot;border-bottom:2px solid currentColor; padding:0 5px 1px;&quot;&gt;√2&lt;/span&gt;&lt;span style=&quot;padding-top:1px;&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;&lt;span class=&quot;ratio-value&quot;&gt;&lt;span style=&quot;display:inline-flex; flex-direction:column; align-items:center;&quot;&gt;&lt;span style=&quot;border-bottom:2px solid currentColor; padding:0 5px 1px;&quot;&gt;1&lt;/span&gt;&lt;span style=&quot;padding-top:1px;&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;
+              &lt;/tr&gt;
+              &lt;tr&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1; background:#eff6ff;&quot;&gt;tan&lt;/td&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;&lt;span class=&quot;ratio-value&quot;&gt;&lt;span style=&quot;display:inline-flex; flex-direction:column; align-items:center;&quot;&gt;&lt;span style=&quot;border-bottom:2px solid currentColor; padding:0 5px 1px;&quot;&gt;√3&lt;/span&gt;&lt;span style=&quot;padding-top:1px;&quot;&gt;3&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;&lt;span class=&quot;ratio-value&quot;&gt;1&lt;/span&gt;&lt;/td&gt;
+                &lt;td style=&quot;padding:8px; border:2px solid #cbd5e1;&quot;&gt;&lt;span class=&quot;ratio-value&quot;&gt;√3&lt;/span&gt;&lt;/td&gt;
+              &lt;/tr&gt;
+            &lt;/table&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+
+    &lt;aside class=&quot;panel&quot;&gt;
+      &lt;h2&gt;도형 자르기&lt;/h2&gt;
+      &lt;div class=&quot;button-box&quot;&gt;
+        &lt;button id=&quot;triBtn&quot; class=&quot;tri page1-control&quot;&gt;정삼각형 반 자르기&lt;/button&gt;
+        &lt;button id=&quot;sqBtn&quot; class=&quot;sq page1-control&quot;&gt;정사각형 반 자르기&lt;/button&gt;
+        &lt;button id=&quot;toggleTableBtn&quot; class=&quot;page2-control&quot;&gt;값 보기&lt;/button&gt;
+        &lt;button id=&quot;pageBtn&quot;&gt;2페이지 보기&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/aside&gt;
+  &lt;/div&gt;
+
+  &lt;script&gt;
+    const stage = document.getElementById('stage');
+    const triBtn = document.getElementById('triBtn');
+    const sqBtn = document.getElementById('sqBtn');
+    const pageBtn = document.getElementById('pageBtn');
+    const page2 = document.getElementById('page2');
+    const toggleTableBtn = document.getElementById('toggleTableBtn');
+
+    triBtn.addEventListener('click', () =&gt; {
+      stage.classList.toggle('tri-cut-on');
+      triBtn.classList.toggle('on');
+    });
+
+    sqBtn.addEventListener('click', () =&gt; {
+      stage.classList.toggle('sq-cut-on');
+      sqBtn.classList.toggle('on');
+    });
+
+    let showingPage2 = false;
+
+    let tableVisible = false;
+
+    toggleTableBtn.addEventListener('click', () =&gt; {
+      tableVisible = !tableVisible;
+
+      document.querySelectorAll('.ratio-value').forEach(el =&gt; {
+        el.style.visibility = tableVisible ? 'visible' : 'hidden';
+      });
+
+      toggleTableBtn.textContent = tableVisible ? '값 숨기기' : '값 보기';
+    });
+
+    pageBtn.addEventListener('click', () =&gt; {
+      showingPage2 = !showingPage2;
+
+      if (showingPage2) {
+        page2.style.display = 'flex';
+        pageBtn.textContent = '1페이지 보기';
+        document.body.classList.remove('page-one');
+        document.body.classList.add('page-two');
+      } else {
+        page2.style.display = 'none';
+        pageBtn.textContent = '2페이지 보기';
+        document.body.classList.remove('page-two');
+        document.body.classList.add('page-one');
+      }
+    });
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+" title="trigo_special1" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"></iframe>
+        </div>
+      </div>
+    </section>
+    <section class="slide tool-slide" data-slide="5">
+      <div class="tool-stage" data-tool-stage>
+        <div class="tool-canvas" data-tool-canvas>
+          <iframe class="tool-frame" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot; /&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no&quot; /&gt;
+&lt;title&gt;삼각비와 닮음 - 직각삼각형 확대 도구&lt;/title&gt;
+&lt;style&gt;
+  :root{
+    --bg:#f7f4ed;
+    --ink:#222;
+    --muted:#666;
+    --accent:#2f80ed;
+    --red:#e85050;
+    --green:#22a06b;
+    --panel:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    font-family: &quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    touch-action:none;
+  }
+  .app{
+    width:100vw;
+    height:100vh;
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+  }
+  header{
+    padding:18px 28px 10px;
+    display:flex;
+    align-items:end;
+    justify-content:space-between;
+    gap:16px;
+  }
+  h1{
+    margin:0;
+    font-size:30px;
+    letter-spacing:-0.04em;
+  }
+  .subtitle{
+    font-size:18px;
+    color:var(--muted);
+    margin-top:4px;
+  }
+  .badge{
+    border:2px solid #88b9e8;
+    color:#1e76b8;
+    border-radius:18px;
+    padding:10px 16px;
+    background:#eef8ff;
+    font-weight:800;
+    font-size:18px;
+    white-space:nowrap;
+  }
+  main{
+    position:relative;
+    margin:0 24px 8px;
+    border-radius:24px;
+    background:#fffdf8;
+    box-shadow:0 8px 28px rgba(0,0,0,.08);
+    overflow:hidden;
+  }
+  svg{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  .controls{
+    margin:0 24px 18px;
+    padding:14px 18px;
+    border-radius:20px;
+    background:rgba(255,255,255,.92);
+    box-shadow:0 6px 20px rgba(0,0,0,.09);
+    display:grid;
+    grid-template-columns:1fr auto auto;
+    align-items:center;
+    gap:14px;
+  }
+  .sliderBox{
+    display:grid;
+    grid-template-columns:120px 1fr 70px;
+    gap:12px;
+    align-items:center;
+    font-size:18px;
+    font-weight:800;
+  }
+  input[type=&quot;range&quot;]{
+    width:100%;
+    accent-color:var(--accent);
+    height:34px;
+  }
+  button{
+    border:0;
+    border-radius:14px;
+    padding:12px 16px;
+    font-weight:900;
+    font-size:16px;
+    background:#222;
+    color:white;
+    cursor:pointer;
+  }
+  button.secondary{
+    background:#e9eef5;
+    color:#1f2937;
+  }
+  .formula{
+    position:absolute;
+    left:28px;
+    top:24px;
+    background:rgba(255,255,255,.9);
+    border:2px solid #e8e2d8;
+    border-radius:18px;
+    padding:14px 18px;
+    font-size:22px;
+    font-weight:900;
+    box-shadow:0 4px 14px rgba(0,0,0,.06);
+  }
+  .formula small{
+    display:block;
+    color:var(--muted);
+    font-size:16px;
+    font-weight:700;
+    margin-top:4px;
+  }
+  .right-formula{
+    position:absolute;
+    right:28px;
+    top:118px;
+    background:rgba(255,255,255,.94);
+    border:2px solid #e8e2d8;
+    border-radius:18px;
+    padding:16px 20px;
+    font-size:24px;
+    font-weight:900;
+    line-height:1.7;
+    box-shadow:0 4px 14px rgba(0,0,0,.06);
+    min-width:280px;
+  }
+  .right-formula .title{
+    color:#1e76b8;
+    font-size:20px;
+    margin-bottom:10px;
+  }
+  .formula-row{
+    display:grid;
+    grid-template-columns:90px auto 20px auto;
+    align-items:center;
+    column-gap:12px;
+    margin:10px 0;
+    white-space:nowrap;
+  }
+  .formula-name{
+    text-align:right;
+  }
+  .equal-note{
+    font-size:18px;
+    color:#666;
+    font-weight:700;
+    margin-left:8px;
+  }
+  .frac{
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
+    vertical-align:middle;
+    line-height:1.15;
+  }
+  .frac .top{
+    border-bottom:3px solid #222;
+    padding:0 8px 5px;
+    min-width:82px;
+    text-align:center;
+  }
+  .frac .bottom{
+    padding:5px 8px 0;
+    min-width:82px;
+    text-align:center;
+  }
+  .seg{
+    display:inline-block;
+    position:relative;
+    padding-top:4px;
+    letter-spacing:.02em;
+  }
+  .seg::before{
+    content:&quot;&quot;;
+    position:absolute;
+    left:0;
+    right:0;
+    top:0;
+    border-top:2.5px solid currentColor;
+  }
+  #drawCanvas{
+    position:fixed;
+    inset:0;
+    z-index:40;
+    pointer-events:none;
+    touch-action:none;
+  }
+  #drawCanvas.on{pointer-events:auto;}
+&lt;/style&gt;
+&lt;style id=&quot;html-lesson-tool-fit&quot;&gt;
+html, body {
+  min-width: 100% !important;
+  min-height: 100% !important;
+  height: auto !important;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+body {
+  touch-action: manipulation !important;
+}
+.app {
+  min-height: 100vh !important;
+  height: auto !important;
+}
+.stage {
+  overflow: auto !important;
+}
+#page2 {
+  overflow: auto !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+#page2 &gt; div {
+  height: auto !important;
+  min-height: 100% !important;
+}
+@media (max-height: 720px) {
+  .app {
+    gap: 10px !important;
+    padding: 10px !important;
+  }
+  .panel {
+    padding: 12px !important;
+    gap: 10px !important;
+    overflow: auto !important;
+  }
+  button {
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+  #page2 &gt; div {
+    padding: 16px !important;
+    gap: 14px !important;
+  }
+}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+  &lt;header&gt;
+    &lt;div&gt;
+      &lt;h1&gt;삼각비는 왜 “비”일까?&lt;/h1&gt;
+      &lt;div class=&quot;subtitle&quot;&gt;같은 각을 가진 직각삼각형은 커져도 닮음이므로, 변의 비가 일정하다.&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;badge&quot;&gt;직각삼각형에서만 정의&lt;/div&gt;
+  &lt;/header&gt;
+
+  &lt;main id=&quot;stage&quot;&gt;
+    &lt;div class=&quot;formula&quot; id=&quot;formula&quot;&gt;
+      sin A = 높이 / 빗변 &amp;nbsp;&amp;nbsp; cos A = 밑변 / 빗변 &amp;nbsp;&amp;nbsp; tan A = 높이 / 밑변
+      &lt;small id=&quot;ratioText&quot;&gt;밑변을 늘려도 높이÷밑변 값은 그대로입니다.&lt;/small&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;right-formula&quot; id=&quot;rightFormula&quot;&gt;&lt;/div&gt;
+    &lt;svg id=&quot;svg&quot; viewBox=&quot;60 0 1200 640&quot; preserveAspectRatio=&quot;xMidYMid meet&quot;&gt;
+      &lt;defs&gt;
+        &lt;marker id=&quot;arrow&quot; markerWidth=&quot;8&quot; markerHeight=&quot;8&quot; refX=&quot;7&quot; refY=&quot;4&quot; orient=&quot;auto&quot; markerUnits=&quot;strokeWidth&quot;&gt;
+          &lt;path d=&quot;M0,0 L8,4 L0,8 Z&quot; fill=&quot;#333&quot;&gt;&lt;/path&gt;
+        &lt;/marker&gt;
+      &lt;/defs&gt;
+
+      &lt;line id=&quot;baseLine&quot; x1=&quot;120&quot; y1=&quot;500&quot; x2=&quot;1080&quot; y2=&quot;500&quot; stroke=&quot;#333&quot; stroke-width=&quot;5&quot; stroke-linecap=&quot;round&quot;/&gt;
+      &lt;line id=&quot;hypLine&quot; x1=&quot;120&quot; y1=&quot;500&quot; x2=&quot;1080&quot; y2=&quot;140&quot; stroke=&quot;#333&quot; stroke-width=&quot;5&quot; stroke-linecap=&quot;round&quot;/&gt;
+
+      &lt;path id=&quot;angleArc&quot; d=&quot;&quot; fill=&quot;#f5a6a6&quot; stroke=&quot;#b95858&quot; stroke-width=&quot;2&quot;/&gt;
+      &lt;text x=&quot;52&quot; y=&quot;542&quot; font-size=&quot;30&quot; font-weight=&quot;900&quot; fill=&quot;#333&quot;&gt;A&lt;/text&gt;
+
+      &lt;g id=&quot;triangles&quot;&gt;&lt;/g&gt;
+      &lt;g id=&quot;labels&quot;&gt;&lt;/g&gt;
+    &lt;/svg&gt;
+  &lt;/main&gt;
+
+  &lt;section class=&quot;controls&quot;&gt;
+    &lt;div class=&quot;sliderBox&quot;&gt;
+      &lt;span&gt;밑변 길이&lt;/span&gt;
+      &lt;input id=&quot;lengthSlider&quot; type=&quot;range&quot; min=&quot;1&quot; max=&quot;8&quot; step=&quot;1&quot; value=&quot;1&quot; /&gt;
+      &lt;span id=&quot;lengthValue&quot;&gt;3칸&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;button class=&quot;secondary&quot; id=&quot;toggleRatios&quot;&gt;비율 표시 OFF&lt;/button&gt;
+    &lt;button id=&quot;resetBtn&quot;&gt;처음으로&lt;/button&gt;
+  &lt;/section&gt;
+&lt;/div&gt;
+
+
+
+&lt;script&gt;
+(() =&gt; {
+  const svg = document.getElementById('svg');
+  const g = document.getElementById('triangles');
+  const labels = document.getElementById('labels');
+  const slider = document.getElementById('lengthSlider');
+  const lengthValue = document.getElementById('lengthValue');
+  const resetBtn = document.getElementById('resetBtn');
+  const toggleRatios = document.getElementById('toggleRatios');
+  const ratioText = document.getElementById('ratioText');
+  const angleArc = document.getElementById('angleArc');
+  const rightFormula = document.getElementById('rightFormula');
+
+  const A = {x:120, y:500};
+  const dx = 115;
+  const slope = 0.375; // height/base ratio, tan A
+  let showRatios = false;
+
+  function hypAt(x){
+    const base = x - A.x;
+    return A.y - slope * base;
+  }
+
+  function make(tag, attrs){
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for(const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+    return el;
+  }
+
+  function arcPath(cx,cy,r,startDeg,endDeg){
+    const s = Math.PI*startDeg/180, e = Math.PI*endDeg/180;
+    const x1 = cx + r*Math.cos(s), y1 = cy - r*Math.sin(s);
+    const x2 = cx + r*Math.cos(e), y2 = cy - r*Math.sin(e);
+    return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 0 ${x2} ${y2} Z`;
+  }
+
+  function render(){
+    const n = Number(slider.value);
+    lengthValue.textContent = `${n}칸`;
+    g.innerHTML = '';
+    labels.innerHTML = '';
+
+    const angle = Math.atan(slope) * 180 / Math.PI;
+    angleArc.setAttribute('d', arcPath(A.x, A.y, 54, 0, angle));
+
+    for(let i=1; i&lt;=n; i++){
+      const x = A.x + dx*i;
+      const y = hypAt(x);
+      const h = A.y - y;
+      const color = i === n ? '#e85050' : '#2f80ed';
+      const opacity = 0.28 + i*0.055;
+
+      // vertical height
+      g.appendChild(make('line', {x1:x,y1:A.y,x2:x,y2:y,stroke:color,'stroke-width':5,'stroke-linecap':'round'}));
+
+      // right angle box
+      const box = 20;
+      g.appendChild(make('path', {
+        d:`M ${x-box} ${A.y} L ${x-box} ${A.y-box} L ${x} ${A.y-box}`,
+        fill:'none', stroke:'#777', 'stroke-width':3
+      }));
+
+      // triangle faint fill
+      g.appendChild(make('polygon', {
+        points:`${A.x},${A.y} ${x},${A.y} ${x},${y}`,
+        fill:color, opacity:opacity*0.18
+      }));
+
+      // point labels
+      const topLabels = ['B','D','F','H','J','L','N','P'];
+      const footLabels = ['C','E','G','I','K','M','O','Q'];
+      labels.appendChild(make('text', {x:x-13,y:y-18,'font-size':34,'font-weight':900,fill:'#333'})).textContent = topLabels[i-1];
+      labels.appendChild(make('text', {x:x-13,y:A.y+42,'font-size':34,'font-weight':900,fill:'#333'})).textContent = footLabels[i-1];
+
+      if(showRatios){
+        // 높이 글자는 세로선 옆에 바로 선 상태로 표시
+        labels.appendChild(make('text', {
+          x:x+10, y:y + h/2 + 6, 'font-size':18, 'font-weight':900, fill:color
+        })).textContent = `높이 ${i}`;
+
+        // 밑변 표시는 각 수직선의 발 C, E, G... 바로 아래에 표시
+        labels.appendChild(make('text', {
+          x:x-28, y:A.y+72, 'font-size':18, 'font-weight':900, fill:color
+        })).textContent = `밑변 ${i}`;
+      }
+    }
+
+    const lastX = A.x + dx*n;
+    const lastY = hypAt(lastX);
+    labels.appendChild(make('circle', {cx:lastX, cy:lastY, r:7, fill:'#e85050'}));
+
+    const tan = slope.toFixed(3);
+    ratioText.textContent = ``;
+
+    const topLabels = ['B','D','F','H','J','L','N','P'];
+    const footLabels = ['C','E','G','I','K','M','O','Q'];
+    const top = topLabels[n-1];
+    const foot = footLabels[n-1];
+    rightFormula.innerHTML = `
+      &lt;div class=&quot;title&quot;&gt;${n}칸 삼각형 기준&lt;/div&gt;
+      &lt;div class=&quot;formula-row&quot;&gt;
+        &lt;span class=&quot;formula-name&quot;&gt;sin A =&lt;/span&gt;
+
+        &lt;span class=&quot;frac&quot;&gt;
+          &lt;span class=&quot;top&quot;&gt;&lt;span class=&quot;seg&quot;&gt;${top}${foot}&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;bottom&quot;&gt;&lt;span class=&quot;seg&quot;&gt;A${top}&lt;/span&gt;&lt;/span&gt;
+        &lt;/span&gt;
+
+        &lt;span&gt;=&lt;/span&gt;
+
+        &lt;span class=&quot;frac&quot;&gt;
+          &lt;span class=&quot;top&quot;&gt;&lt;span class=&quot;seg&quot;&gt;BC&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;bottom&quot;&gt;&lt;span class=&quot;seg&quot;&gt;AB&lt;/span&gt;&lt;/span&gt;
+        &lt;/span&gt;
+      &lt;/div&gt;
+
+      &lt;div class=&quot;formula-row&quot;&gt;
+        &lt;span class=&quot;formula-name&quot;&gt;cos A =&lt;/span&gt;
+
+        &lt;span class=&quot;frac&quot;&gt;
+          &lt;span class=&quot;top&quot;&gt;&lt;span class=&quot;seg&quot;&gt;A${foot}&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;bottom&quot;&gt;&lt;span class=&quot;seg&quot;&gt;A${top}&lt;/span&gt;&lt;/span&gt;
+        &lt;/span&gt;
+
+        &lt;span&gt;=&lt;/span&gt;
+
+        &lt;span class=&quot;frac&quot;&gt;
+          &lt;span class=&quot;top&quot;&gt;&lt;span class=&quot;seg&quot;&gt;AC&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;bottom&quot;&gt;&lt;span class=&quot;seg&quot;&gt;AB&lt;/span&gt;&lt;/span&gt;
+        &lt;/span&gt;
+      &lt;/div&gt;
+
+      &lt;div class=&quot;formula-row&quot;&gt;
+        &lt;span class=&quot;formula-name&quot;&gt;tan A =&lt;/span&gt;
+
+        &lt;span class=&quot;frac&quot;&gt;
+          &lt;span class=&quot;top&quot;&gt;&lt;span class=&quot;seg&quot;&gt;${top}${foot}&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;bottom&quot;&gt;&lt;span class=&quot;seg&quot;&gt;A${foot}&lt;/span&gt;&lt;/span&gt;
+        &lt;/span&gt;
+
+        &lt;span&gt;=&lt;/span&gt;
+
+        &lt;span class=&quot;frac&quot;&gt;
+          &lt;span class=&quot;top&quot;&gt;&lt;span class=&quot;seg&quot;&gt;BC&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;bottom&quot;&gt;&lt;span class=&quot;seg&quot;&gt;AC&lt;/span&gt;&lt;/span&gt;
+        &lt;/span&gt;
+      &lt;/div&gt;
+    `;
+  }
+
+  slider.addEventListener('input', render);
+  resetBtn.addEventListener('click', () =&gt; { slider.value = 1; showRatios = false; toggleRatios.textContent='비율 표시 OFF'; render(); });
+  toggleRatios.addEventListener('click', () =&gt; {
+    showRatios = !showRatios;
+    toggleRatios.textContent = showRatios ? '비율 표시 ON' : '비율 표시 OFF';
+    render();
+  });
+
+  render();
+})();
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+" title="trigo_similarity" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"></iframe>
+        </div>
+      </div>
+    </section>
+  </main>
+  <canvas id="inkCanvas"></canvas>
+  <nav class="toolbar" aria-label="수업 도구">
+    <button id="prevSlide" title="이전 슬라이드">‹</button>
+    <span class="slide-count" id="slideCount"></span>
+    <button id="nextSlide" title="다음 슬라이드">›</button>
+    <button class="tool" id="inkToggle" title="판서 켜기">펜</button>
+    <button class="tool" id="undoInk" title="마지막 판서 되돌리기">↶</button>
+    <button class="tool" id="clearInk" title="판서 전체 지우기">지움</button>
+    <div class="thickness" aria-label="펜 두께">
+      <button class="tool thick-btn selected" data-width="3">얇게</button>
+      <button class="tool thick-btn" data-width="6">보통</button>
+      <button class="tool thick-btn" data-width="10">두껍게</button>
+    </div>
+    <div class="palette" aria-label="펜 색상">
+      <button class="color-btn selected" data-color="#111827" style="background:#111827" title="검정"></button>
+      <button class="color-btn" data-color="#dc2626" style="background:#dc2626" title="빨강"></button>
+      <button class="color-btn" data-color="#2563eb" style="background:#2563eb" title="파랑"></button>
+      <button class="color-btn" data-color="#16a34a" style="background:#16a34a" title="초록"></button>
+      <button class="color-btn" data-color="#f59e0b" style="background:#f59e0b" title="주황"></button>
+      <button class="color-btn" data-color="#7c3aed" style="background:#7c3aed" title="보라"></button>
+    </div>
+  </nav>
+  <script>
+
+    const PDFJS_RUNTIME = null;
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    let currentSlide = 0;
+    const slideCountEl = document.getElementById("slideCount");
+
+    function showSlide(index) {
+      currentSlide = Math.max(0, Math.min(slides.length - 1, index));
+      slides.forEach((slide, i) => slide.classList.toggle("active", i === currentSlide));
+      document.body.classList.toggle("tool-active", slides[currentSlide]?.classList.contains("tool-slide"));
+      slideCountEl.textContent = (currentSlide + 1) + " / " + slides.length;
+      slides[currentSlide]?.dispatchEvent(new CustomEvent("slideactive"));
+    }
+
+    document.getElementById("prevSlide").addEventListener("click", () => showSlide(currentSlide - 1));
+    document.getElementById("nextSlide").addEventListener("click", () => showSlide(currentSlide + 1));
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") showSlide(currentSlide - 1);
+      if (event.key === "ArrowRight" || event.key === " ") showSlide(currentSlide + 1);
+    });
+    showSlide(0);
+
+    initToolbarDrag();
+
+    function initToolbarDrag() {
+      const toolbar = document.querySelector(".toolbar");
+      if (!toolbar) return;
+
+      const handle = document.createElement("button");
+      handle.type = "button";
+      handle.id = "toolbarDragHandle";
+      handle.className = "toolbar-drag-handle";
+      handle.title = "툴바 이동";
+      handle.textContent = "\u2195";
+      toolbar.prepend(handle);
+
+      let drag = null;
+      let savedPosition = null;
+
+      function clampPosition(left, top) {
+        const margin = 8;
+        const rect = toolbar.getBoundingClientRect();
+        const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin);
+        const maxTop = Math.max(margin, window.innerHeight - rect.height - margin);
+        return {
+          left: Math.min(maxLeft, Math.max(margin, left)),
+          top: Math.min(maxTop, Math.max(margin, top))
+        };
+      }
+
+      function applyPosition(position) {
+        savedPosition = clampPosition(position.left, position.top);
+        toolbar.style.left = savedPosition.left + "px";
+        toolbar.style.top = savedPosition.top + "px";
+        toolbar.style.right = "auto";
+        toolbar.style.bottom = "auto";
+        toolbar.classList.add("toolbar-positioned");
+      }
+
+      function resetPosition() {
+        savedPosition = null;
+        toolbar.style.left = "";
+        toolbar.style.top = "";
+        toolbar.style.right = "";
+        toolbar.style.bottom = "";
+        toolbar.classList.remove("toolbar-positioned");
+      }
+
+      handle.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const rect = toolbar.getBoundingClientRect();
+        drag = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          baseLeft: rect.left,
+          baseTop: rect.top
+        };
+        toolbar.classList.add("dragging");
+        handle.setPointerCapture(event.pointerId);
+      });
+
+      handle.addEventListener("pointermove", (event) => {
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        applyPosition({
+          left: drag.baseLeft + event.clientX - drag.startX,
+          top: drag.baseTop + event.clientY - drag.startY
+        });
+      });
+
+      function endDrag(event) {
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        toolbar.classList.remove("dragging");
+        try { handle.releasePointerCapture(event.pointerId); } catch (_) {}
+        drag = null;
+      }
+
+      handle.addEventListener("pointerup", endDrag);
+      handle.addEventListener("pointercancel", endDrag);
+      handle.addEventListener("dblclick", resetPosition);
+      window.addEventListener("resize", () => {
+        if (savedPosition) applyPosition(savedPosition);
+      });
+    }
+
+    const inkCanvas = document.getElementById("inkCanvas");
+    const inkCtx = inkCanvas.getContext("2d");
+    const inkToggle = document.getElementById("inkToggle");
+    let inkOn = false;
+    let drawing = false;
+    let inkColor = "#111827";
+    let inkWidth = 4;
+    let strokes = [];
+    let currentStroke = null;
+
+    function resizeInkCanvas() {
+      const old = document.createElement("canvas");
+      old.width = inkCanvas.width;
+      old.height = inkCanvas.height;
+      old.getContext("2d").drawImage(inkCanvas, 0, 0);
+      inkCanvas.width = Math.floor(window.innerWidth * window.devicePixelRatio);
+      inkCanvas.height = Math.floor(window.innerHeight * window.devicePixelRatio);
+      inkCanvas.style.width = window.innerWidth + "px";
+      inkCanvas.style.height = window.innerHeight + "px";
+      inkCtx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+      inkCtx.drawImage(old, 0, 0, old.width / window.devicePixelRatio, old.height / window.devicePixelRatio);
+    }
+
+    function pointerPos(event) {
+      const rect = inkCanvas.getBoundingClientRect();
+      return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    }
+
+    function redrawInk() {
+      inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
+      for (const stroke of strokes) {
+        if (!stroke.points.length) continue;
+        inkCtx.beginPath();
+        inkCtx.moveTo(stroke.points[0].x, stroke.points[0].y);
+        for (let i = 1; i < stroke.points.length; i += 1) inkCtx.lineTo(stroke.points[i].x, stroke.points[i].y);
+        inkCtx.strokeStyle = stroke.color;
+        inkCtx.lineWidth = stroke.width;
+        inkCtx.lineCap = "round";
+        inkCtx.lineJoin = "round";
+        inkCtx.stroke();
+      }
+    }
+
+    resizeInkCanvas();
+    window.addEventListener("resize", resizeInkCanvas);
+
+    inkToggle.addEventListener("click", () => {
+      inkOn = !inkOn;
+      document.body.classList.toggle("ink-on", inkOn);
+      inkToggle.classList.toggle("on", inkOn);
+    });
+
+    inkCanvas.addEventListener("pointerdown", (event) => {
+      if (!inkOn) return;
+      drawing = true;
+      currentStroke = { color: inkColor, width: inkWidth, points: [pointerPos(event)] };
+      inkCanvas.setPointerCapture(event.pointerId);
+    });
+
+    inkCanvas.addEventListener("pointermove", (event) => {
+      if (!drawing || !currentStroke) return;
+      const p = pointerPos(event);
+      currentStroke.points.push(p);
+      redrawInk();
+      inkCtx.beginPath();
+      const points = currentStroke.points;
+      inkCtx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i += 1) inkCtx.lineTo(points[i].x, points[i].y);
+      inkCtx.strokeStyle = currentStroke.color;
+      inkCtx.lineWidth = currentStroke.width;
+      inkCtx.lineCap = "round";
+      inkCtx.lineJoin = "round";
+      inkCtx.stroke();
+    });
+
+    inkCanvas.addEventListener("pointerup", (event) => {
+      if (drawing && currentStroke) strokes.push(currentStroke);
+      drawing = false;
+      currentStroke = null;
+      try { inkCanvas.releasePointerCapture(event.pointerId); } catch (_) {}
+    });
+
+    document.getElementById("undoInk").addEventListener("click", () => {
+      strokes.pop();
+      redrawInk();
+    });
+
+    document.getElementById("clearInk").addEventListener("click", () => {
+      strokes = [];
+      redrawInk();
+    });
+
+    document.querySelectorAll(".color-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".color-btn").forEach((item) => item.classList.remove("selected"));
+        button.classList.add("selected");
+        inkColor = button.dataset.color;
+      });
+    });
+
+    document.querySelectorAll(".thick-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".thick-btn").forEach((item) => item.classList.remove("selected"));
+        button.classList.add("selected");
+        inkWidth = Number(button.dataset.width);
+      });
+    });
+
+    let pdfJsPromise = null;
+
+    initToolFrames();
+    initImageZoom();
+    initPdfSlides();
+
+    function initToolFrames() {
+      document.querySelectorAll(".tool-slide").forEach((slide) => {
+        const stage = slide.querySelector("[data-tool-stage]");
+        const canvas = slide.querySelector("[data-tool-canvas]");
+        const frame = slide.querySelector(".tool-frame");
+        if (!stage || !canvas || !frame) return;
+
+        const baseWidth = 1366;
+        const baseHeight = 768;
+
+        function fit() {
+          const availableWidth = Math.max(320, stage.clientWidth);
+          const availableHeight = Math.max(240, stage.clientHeight);
+          const scale = Math.max(0.35, Math.min(availableWidth / baseWidth, availableHeight / baseHeight));
+          canvas.style.width = Math.ceil(baseWidth * scale) + "px";
+          canvas.style.height = Math.ceil(baseHeight * scale) + "px";
+          frame.style.width = baseWidth + "px";
+          frame.style.height = baseHeight + "px";
+          frame.style.transform = "scale(" + scale + ")";
+        }
+
+        slide.addEventListener("slideactive", fit);
+        window.addEventListener("resize", fit);
+        frame.addEventListener("load", fit);
+        if (slide.classList.contains("active")) fit();
+      });
+    }
+
+    function initImageZoom() {
+      document.querySelectorAll(".image-slide").forEach((slide) => {
+        const viewport = slide.querySelector("[data-image-viewport]");
+        const image = slide.querySelector(".image-page");
+        const value = slide.querySelector("[data-zoom-value]");
+        if (!viewport || !image || !value) return;
+
+        const state = { scale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0, baseX: 0, baseY: 0 };
+
+        function apply() {
+          image.style.transform = "translate(" + state.x + "px, " + state.y + "px) scale(" + state.scale + ")";
+          value.textContent = Math.round(state.scale * 100) + "%";
+        }
+
+        function setScale(nextScale) {
+          state.scale = Math.max(1, Math.min(4, nextScale));
+          if (state.scale === 1) {
+            state.x = 0;
+            state.y = 0;
+          }
+          apply();
+        }
+
+        slide.querySelector("[data-zoom-in]")?.addEventListener("click", () => setScale(state.scale + 0.25));
+        slide.querySelector("[data-zoom-out]")?.addEventListener("click", () => setScale(state.scale - 0.25));
+        slide.querySelector("[data-zoom-reset]")?.addEventListener("click", () => {
+          state.scale = 1;
+          state.x = 0;
+          state.y = 0;
+          apply();
+        });
+
+        viewport.addEventListener("wheel", (event) => {
+          if (!event.ctrlKey) return;
+          event.preventDefault();
+          setScale(state.scale + (event.deltaY < 0 ? 0.18 : -0.18));
+        }, { passive: false });
+
+        viewport.addEventListener("pointerdown", (event) => {
+          if (inkOn || state.scale <= 1) return;
+          state.dragging = true;
+          state.startX = event.clientX;
+          state.startY = event.clientY;
+          state.baseX = state.x;
+          state.baseY = state.y;
+          viewport.classList.add("dragging");
+          viewport.setPointerCapture(event.pointerId);
+        });
+
+        viewport.addEventListener("pointermove", (event) => {
+          if (!state.dragging) return;
+          state.x = state.baseX + event.clientX - state.startX;
+          state.y = state.baseY + event.clientY - state.startY;
+          apply();
+        });
+
+        viewport.addEventListener("pointerup", (event) => {
+          state.dragging = false;
+          viewport.classList.remove("dragging");
+          try { viewport.releasePointerCapture(event.pointerId); } catch (_) {}
+        });
+
+        apply();
+      });
+    }
+
+    function base64ToUint8(base64) {
+      const raw = atob(base64);
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+      return bytes;
+    }
+
+    async function loadPdfJs() {
+      if (!PDFJS_RUNTIME) return null;
+      if (!pdfJsPromise) {
+        pdfJsPromise = (async () => {
+          const pdfCode = atob(PDFJS_RUNTIME.pdf);
+          const workerCode = atob(PDFJS_RUNTIME.worker);
+          const pdfUrl = URL.createObjectURL(new Blob([pdfCode], { type: "text/javascript" }));
+          const workerUrl = URL.createObjectURL(new Blob([workerCode], { type: "text/javascript" }));
+          const pdfjsLib = await import(pdfUrl);
+          pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+          return pdfjsLib;
+        })();
+      }
+      return pdfJsPromise;
+    }
+
+    function initPdfSlides() {
+      document.querySelectorAll(".pdf-slide").forEach((slide) => {
+        const dataScript = slide.querySelector('script[type="application/pdf-base64"]');
+        const canvas = slide.querySelector("[data-pdf-canvas]");
+        const wrap = slide.querySelector("[data-pdf-viewer]");
+        const pageLabel = slide.querySelector("[data-pdf-page]");
+        const zoomLabel = slide.querySelector("[data-pdf-zoom]");
+        const loading = slide.querySelector(".pdf-loading");
+        if (!dataScript || !canvas || !wrap) return;
+
+        const state = { pdf: null, page: 1, zoom: 1, rendering: false, pending: false };
+        const ctx = canvas.getContext("2d");
+
+        async function render() {
+          if (!slide.classList.contains("active")) return;
+          if (!state.pdf || state.rendering) {
+            state.pending = Boolean(state.pdf);
+            return;
+          }
+          state.rendering = true;
+          const page = await state.pdf.getPage(state.page);
+          const baseViewport = page.getViewport({ scale: 1 });
+          const availableWidth = Math.max(240, wrap.clientWidth - 56);
+          const availableHeight = Math.max(240, wrap.clientHeight - 136);
+          const fitScale = Math.min(availableWidth / baseViewport.width, availableHeight / baseViewport.height);
+          const cssScale = fitScale * state.zoom;
+          const dpr = window.devicePixelRatio || 1;
+          const viewport = page.getViewport({ scale: cssScale * dpr });
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          canvas.style.width = Math.ceil(viewport.width / dpr) + "px";
+          canvas.style.height = Math.ceil(viewport.height / dpr) + "px";
+          wrap.classList.toggle("zoomed", state.zoom > 1.02);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          if (pageLabel) pageLabel.textContent = state.page + " / " + state.pdf.numPages;
+          if (zoomLabel) zoomLabel.textContent = Math.round(state.zoom * 100) + "%";
+          if (loading) loading.style.display = "none";
+          canvas.style.display = "block";
+          state.rendering = false;
+          if (state.pending) {
+            state.pending = false;
+            render();
+          }
+        }
+
+        function setPage(nextPage) {
+          if (!state.pdf) return;
+          state.page = Math.max(1, Math.min(state.pdf.numPages, nextPage));
+          render();
+        }
+
+        function setZoom(nextZoom) {
+          state.zoom = Math.max(0.5, Math.min(4, nextZoom));
+          if (zoomLabel) zoomLabel.textContent = Math.round(state.zoom * 100) + "%";
+          render();
+        }
+
+        slide.querySelector("[data-pdf-prev]")?.addEventListener("click", () => setPage(state.page - 1));
+        slide.querySelector("[data-pdf-next]")?.addEventListener("click", () => setPage(state.page + 1));
+        slide.querySelector("[data-pdf-zoom-out]")?.addEventListener("click", () => setZoom(state.zoom - 0.25));
+        slide.querySelector("[data-pdf-zoom-in]")?.addEventListener("click", () => setZoom(state.zoom + 0.25));
+        slide.querySelector("[data-pdf-reset]")?.addEventListener("click", () => {
+          state.zoom = 1;
+          render();
+        });
+        wrap.addEventListener("wheel", (event) => {
+          if (!event.ctrlKey) return;
+          event.preventDefault();
+          setZoom(state.zoom + (event.deltaY < 0 ? 0.18 : -0.18));
+        }, { passive: false });
+        slide.addEventListener("slideactive", () => {
+          if (state.pdf) render();
+        });
+
+        loadPdfJs().then(async (pdfjsLib) => {
+          if (!pdfjsLib) throw new Error("PDF.js runtime is missing");
+          const bytes = base64ToUint8(dataScript.textContent.trim());
+          state.pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+          if (pageLabel) pageLabel.textContent = state.page + " / " + state.pdf.numPages;
+          if (zoomLabel) zoomLabel.textContent = Math.round(state.zoom * 100) + "%";
+          render();
+        }).catch((error) => {
+          console.error(error);
+          if (loading) loading.textContent = "PDF를 불러오지 못했습니다.";
+        });
+
+        window.addEventListener("resize", () => {
+          if (state.pdf) render();
+        });
+      });
+    }
+
+    initCircleAngle();
+
+    function initCircleAngle() {
+      const svg = document.getElementById("circleSvg");
+      if (!svg) return;
+      const cx = 470, cy = 350, r = 215;
+      const state = {
+        a: degToRad(145),
+        b: degToRad(35),
+        p: degToRad(265),
+        showAngles: true,
+        sameArcMode: true,
+        dragging: null
+      };
+      const byId = (id) => document.getElementById(id);
+      const els = {
+        Apoint: byId("Apoint"), Bpoint: byId("Bpoint"), Ppoint: byId("Ppoint"),
+        Alabel: byId("Alabel"), Blabel: byId("Blabel"), Plabel: byId("Plabel"),
+        OA: byId("OA"), OB: byId("OB"), PA: byId("PA"), PB: byId("PB"), AB: byId("AB"),
+        minorArc: byId("minorArc"), centerAngleArc: byId("centerAngleArc"),
+        inscribedAngleArc: byId("inscribedAngleArc"), centerAngleLabel: byId("centerAngleLabel"),
+        inscribedAngleLabel: byId("inscribedAngleLabel"), arcText: byId("arcText"),
+        centerValue: byId("centerValue"), inscribedValue: byId("inscribedValue"),
+        formula: byId("formula"), proofBox: byId("proofBox")
+      };
+
+      function degToRad(deg) { return deg * Math.PI / 180; }
+      function radToDeg(rad) { return rad * 180 / Math.PI; }
+      function norm(angle) {
+        while (angle < 0) angle += Math.PI * 2;
+        while (angle >= Math.PI * 2) angle -= Math.PI * 2;
+        return angle;
+      }
+      function pointOnCircle(angle) {
+        return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+      }
+      function setLine(line, p1, p2) {
+        line.setAttribute("x1", p1.x);
+        line.setAttribute("y1", p1.y);
+        line.setAttribute("x2", p2.x);
+        line.setAttribute("y2", p2.y);
+      }
+      function setPoint(circle, label, p, dx, dy) {
+        circle.setAttribute("cx", p.x);
+        circle.setAttribute("cy", p.y);
+        label.setAttribute("x", p.x + dx);
+        label.setAttribute("y", p.y + dy);
+      }
+      function arcPath(radius, start, end) {
+        start = norm(start);
+        end = norm(end);
+        const delta = norm(end - start);
+        const largeArc = delta > Math.PI ? 1 : 0;
+        const p1 = { x: cx + radius * Math.cos(start), y: cy + radius * Math.sin(start) };
+        const p2 = { x: cx + radius * Math.cos(end), y: cy + radius * Math.sin(end) };
+        return "M " + p1.x + " " + p1.y + " A " + radius + " " + radius + " 0 " + largeArc + " 1 " + p2.x + " " + p2.y;
+      }
+      function angleBetweenSmall(a, b) {
+        let diff = Math.abs(norm(a) - norm(b));
+        if (diff > Math.PI) diff = Math.PI * 2 - diff;
+        return diff;
+      }
+      function midAngleSmall(a, b) {
+        a = norm(a);
+        b = norm(b);
+        let diff = norm(b - a);
+        if (diff > Math.PI) diff -= Math.PI * 2;
+        return norm(a + diff / 2);
+      }
+      function pointAngleFromSvg(event) {
+        const pt = svg.createSVGPoint();
+        pt.x = event.clientX;
+        pt.y = event.clientY;
+        const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+        return Math.atan2(p.y - cy, p.x - cx);
+      }
+      function nearestOppositeArcAngle(p, a, b) {
+        p = norm(p);
+        a = norm(a);
+        b = norm(b);
+        const ab = norm(b - a);
+        const ba = norm(a - b);
+        if (ab <= Math.PI) {
+          const bp = norm(p - b);
+          if (bp >= 0 && bp <= ba) return p;
+          return norm(midAngleSmall(a, b) + Math.PI);
+        }
+        const ap = norm(p - a);
+        if (ap >= 0 && ap <= ab) return p;
+        return norm(midAngleSmall(a, b) + Math.PI);
+      }
+      function drawInscribedAngleArc(P, A, B, deg) {
+        const v1 = Math.atan2(A.y - P.y, A.x - P.x);
+        const v2 = Math.atan2(B.y - P.y, B.x - P.x);
+        let diff = norm(v2 - v1);
+        if (diff > Math.PI) diff -= Math.PI * 2;
+        const radius = 52;
+        const p1 = { x: P.x + radius * Math.cos(v1), y: P.y + radius * Math.sin(v1) };
+        const p2 = { x: P.x + radius * Math.cos(v1 + diff), y: P.y + radius * Math.sin(v1 + diff) };
+        const sweep = diff > 0 ? 1 : 0;
+        els.inscribedAngleArc.setAttribute("d", "M " + p1.x + " " + p1.y + " A " + radius + " " + radius + " 0 0 " + sweep + " " + p2.x + " " + p2.y);
+        const mid = v1 + diff / 2;
+        els.inscribedAngleLabel.setAttribute("x", P.x + 80 * Math.cos(mid) - 22);
+        els.inscribedAngleLabel.setAttribute("y", P.y + 80 * Math.sin(mid) + 8);
+        els.inscribedAngleLabel.textContent = deg + "°";
+      }
+      function update() {
+        if (state.sameArcMode) state.p = nearestOppositeArcAngle(state.p, state.a, state.b);
+        const A = pointOnCircle(state.a);
+        const B = pointOnCircle(state.b);
+        const P = pointOnCircle(state.p);
+        const O = { x: cx, y: cy };
+        setPoint(els.Apoint, els.Alabel, A, -34, -18);
+        setPoint(els.Bpoint, els.Blabel, B, 18, -18);
+        setPoint(els.Ppoint, els.Plabel, P, 18, 28);
+        setLine(els.OA, O, A);
+        setLine(els.OB, O, B);
+        setLine(els.PA, P, A);
+        setLine(els.PB, P, B);
+        setLine(els.AB, A, B);
+        const centerAngle = angleBetweenSmall(state.a, state.b);
+        const inscribedAngle = centerAngle / 2;
+        const centerDeg = Math.round(radToDeg(centerAngle));
+        const inscribedDeg = Math.round(radToDeg(inscribedAngle));
+        const start = norm(state.a);
+        const end = norm(state.b);
+        let delta = norm(end - start);
+        let arcStart = start, arcEnd = end;
+        if (delta > Math.PI) {
+          arcStart = end;
+          arcEnd = start;
+        }
+        els.minorArc.setAttribute("d", arcPath(r, arcStart, arcEnd));
+        els.centerAngleArc.setAttribute("d", arcPath(72, arcStart, arcEnd));
+        const mid = midAngleSmall(state.a, state.b);
+        els.arcText.setAttribute("x", cx + (r + 34) * Math.cos(mid) - 38);
+        els.arcText.setAttribute("y", cy + (r + 34) * Math.sin(mid));
+        els.centerAngleLabel.setAttribute("x", cx + 105 * Math.cos(mid) - 24);
+        els.centerAngleLabel.setAttribute("y", cy + 105 * Math.sin(mid) + 8);
+        els.centerAngleLabel.textContent = centerDeg + "°";
+        drawInscribedAngleArc(P, A, B, inscribedDeg);
+        [els.centerAngleArc, els.centerAngleLabel, els.inscribedAngleArc, els.inscribedAngleLabel].forEach((el) => {
+          el.style.display = state.showAngles ? "" : "none";
+        });
+        els.centerValue.textContent = centerDeg + "°";
+        els.inscribedValue.textContent = inscribedDeg + "°";
+        els.formula.textContent = centerDeg + "° = " + inscribedDeg + "° × 2";
+        els.proofBox.innerHTML = "<strong>증명 흐름</strong><br>OA = OP, OB = OP 이므로 삼각형 AOP와 BOP는 각각 이등변삼각형입니다.<br><br>따라서 밑각이 서로 같고, 중심각은 원주각을 이루는 두 조각의 외각 합으로 볼 수 있습니다.<br><br><strong>결론: ∠AOB = 2 × ∠APB</strong>";
+      }
+      ["dragA", "dragB", "dragP"].forEach((id) => {
+        document.getElementById(id).addEventListener("pointerdown", (event) => {
+          if (inkOn) return;
+          state.dragging = id.replace("drag", "").toLowerCase();
+          svg.setPointerCapture(event.pointerId);
+        });
+      });
+      svg.addEventListener("pointermove", (event) => {
+        if (!state.dragging || inkOn) return;
+        const angle = norm(pointAngleFromSvg(event));
+        if (state.dragging === "p" && state.sameArcMode) state.p = nearestOppositeArcAngle(angle, state.a, state.b);
+        else state[state.dragging] = angle;
+        update();
+      });
+      svg.addEventListener("pointerup", (event) => {
+        state.dragging = null;
+        try { svg.releasePointerCapture(event.pointerId); } catch (_) {}
+      });
+      document.getElementById("modeSameArc").addEventListener("click", () => {
+        state.sameArcMode = !state.sameArcMode;
+        document.getElementById("modeSameArc").classList.toggle("active", state.sameArcMode);
+        document.getElementById("modeSameArc").textContent = state.sameArcMode ? "같은 호 유지" : "자유 이동";
+        update();
+      });
+      document.getElementById("toggleAngles").addEventListener("click", () => {
+        state.showAngles = !state.showAngles;
+        document.getElementById("toggleAngles").textContent = state.showAngles ? "각도 표시 숨기기" : "각도 표시 보이기";
+        update();
+      });
+      document.getElementById("toggleProof").addEventListener("click", () => {
+        const box = document.getElementById("proofBox");
+        box.classList.toggle("on");
+        document.getElementById("toggleProof").classList.toggle("active", box.classList.contains("on"));
+      });
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        state.a = degToRad(145);
+        state.b = degToRad(35);
+        state.p = degToRad(265);
+        update();
+      });
+      update();
+    }
+  
+  </script>
+</body>
+</html>
